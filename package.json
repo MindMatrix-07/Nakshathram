@@ -1,0 +1,14 @@
+{
+  "name": "nakshathram",
+  "version": "1.0.0",
+  "description": "Nakshathram - A beautiful Manglish to Malayalam rich text editor.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.2.0"
+  }
+}
