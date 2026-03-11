@@ -479,25 +479,25 @@ body {
 /* Editor Wrapper */
 .editor-wrapper {
   flex: 1;
-  padding: 20px 40px;
+  padding: 20px 10px;
   overflow-y: auto;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start; /* Left aligned */
 }
 
 #editor {
   width: 100%;
-  max-width: 900px;
+  max-width: none; /* No max-width as per request to shift left */
   height: 100%;
   min-height: 500px;
   background-color: var(--editor-bg);
-  border-radius: 12px;
-  padding: 40px;
+  border-radius: 16px; /* Smoothened corners */
+  padding: 40px 10px; /* Reduced side padding */
   font-size: 1.1rem;
   line-height: 1.7;
   color: var(--text-primary);
   outline: none;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -1128,3 +1128,466 @@ body {
   background: var(--hover-bg);
   color: var(--text-primary);
 }
+
+/* Correction Modal Redesign - Grid Edition */
+.correction-main-layout {
+  display: grid;
+  grid-template-columns: auto 60px; /* Canvas + Vertical Control Column */
+  grid-template-areas: "canvas vertical";
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  margin: 10px auto 20px auto;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: fit-content;
+}
+
+.canvas-area {
+  grid-area: canvas;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.vertical-control-column {
+  grid-area: vertical;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px; /* Match canvas height */
+  width: 60px;
+}
+
+.ghost-slider-v {
+  writing-mode: bt-lr; /* IE/Edge */
+  appearance: slider-vertical;
+  width: 12px;
+  height: 340px;
+  cursor: pointer;
+}
+
+.horizontal-control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 5px;
+  box-sizing: border-box;
+}
+
+.ghost-slider-h {
+  flex: 1;
+  height: 6px;
+  cursor: pointer;
+}
+
+.ghost-secondary-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 15px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.ghost-secondary-controls .control-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.ghost-slider-s {
+  flex: 1;
+  max-width: 200px;
+}
+
+.icon-btn-small {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  color: #58a6ff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.icon-btn-small:hover {
+  background: rgba(88, 166, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 123, 114, 0.1);
+}
+
+/* Plugins Modal Specific */
+.plugins-modal-content {
+  max-width: 600px;
+}
+
+.plugins-body {
+  padding: 24px;
+}
+
+.plugin-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.plugin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.plugin-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.plugin-badge {
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--accent-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.plugin-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.plugin-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.helper-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center; /* Centered helper text for dev portal */
+  margin-top: 10px;
+  line-height: 1.5;
+  width: 100%;
+}
+
+.helper-text a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+.helper-text a:hover {
+  text-decoration: underline;
+}
+
+.helper-text code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.spotify-search-bar {
+  display: flex;
+  gap: 10px;
+}
+
+.spotify-search-bar .modal-input {
+  margin-bottom: 0;
+}
+
+.spotify-results-list {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.spotify-results-list.hidden {
+  display: none;
+}
+
+.spotify-song-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s;
+}
+
+.spotify-song-item:last-child {
+  border-bottom: none;
+}
+
+.spotify-song-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.spotify-song-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.spotify-song-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.spotify-song-title {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.spotify-song-artist {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.spotify-embed-wrapper {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background: #000;
+}
+
+.spotify-embed-wrapper iframe {
+  border: none;
+  border-radius: 12px;
+  width: 100%;
+}
+
+/* Sidebar Spotify Widget Styles */
+.sidebar-spotify-widget {
+  margin-top: 24px;
+  padding: 16px 8px;
+  border-top: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.sidebar-spotify-widget .plugin-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.sidebar-spotify-widget .plugin-header h4 {
+  font-size: 0.9rem;
+  color: #1DB954; /* Spotify Green */
+}
+
+.sidebar-spotify-widget .plugin-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+}
+
+.sidebar-input {
+  width: 100%;
+  background: var(--active-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sidebar-input:focus {
+  border-color: #1DB954;
+}
+
+.sidebar-action-btn {
+  width: 100%;
+  background: #1DB954;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-action-btn:hover {
+  background: #1ed760;
+  transform: translateY(-1px);
+}
+
+.sidebar-spotify-btn {
+  width: 100%;
+  background: #1DB954;
+  color: #000;
+  border: none;
+  border-radius: 20px;
+  padding: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.sidebar-spotify-btn:hover {
+  background: #1ed760;
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.sidebar-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+  width: 100%;
+  text-align: center;
+}
+
+.sidebar-link-btn:hover {
+  color: var(--text-primary);
+}
+
+.sidebar-spotify-widget .spotify-search-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sidebar-spotify-widget .spotify-search-bar .sidebar-input {
+  margin-bottom: 0;
+}
+
+.sidebar-spotify-widget .icon-btn {
+  background: var(--active-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sidebar-spotify-widget .icon-btn:hover {
+  border-color: #1DB954;
+  color: #1DB954;
+}
+
+.sidebar-spotify-widget .spotify-results-list {
+  max-height: 150px;
+  margin-bottom: 12px;
+}
+
+.sidebar-spotify-widget .spotify-song-item {
+  padding: 6px 8px;
+  gap: 8px;
+}
+
+.sidebar-spotify-widget .spotify-song-img {
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar-spotify-widget .spotify-song-title {
+  font-size: 0.8rem;
+}
+
+.sidebar-spotify-widget .spotify-song-artist {
+  font-size: 0.7rem;
+}
+
+/* Editor Docked Spotify Player Styles */
+.editor-view-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0px 20px 5px;
+  overflow-y: auto;
+}
+
+.editor-docked-player {
+  width: calc(100% - 10px);
+  margin-left: 5px;
+  height: 152px;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.editor-docked-player iframe {
+  border: none;
+  border-radius: 16px;
+  width: 100%;
+  height: 100%;
+}
+

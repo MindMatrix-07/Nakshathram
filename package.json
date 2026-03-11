@@ -10,5 +10,8 @@
   "license": "ISC",
   "devDependencies": {
     "electron": "^28.2.0"
+  },
+  "dependencies": {
+    "spotify-web-api-node": "^5.0.2"
   }
 }

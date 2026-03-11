@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -19,6 +19,10 @@ function createWindow () {
 
   mainWindow.loadFile('index.html');
   mainWindow.setMenuBarVisibility(false);
+
+  // Spoof Desktop User-Agent to enable full track playback in Spotify Iframe
+  const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  mainWindow.webContents.setUserAgent(desktopUA);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -56,6 +60,80 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+// Spotify Internal Flow
+ipcMain.handle('spotify-login', async (event, authUrl) => {
+  return new Promise((resolve, reject) => {
+    let authWindow = new BrowserWindow({
+      width: 500,
+      height: 700,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: false // Temporarily disable to see if it fixes the white screen
+      }
+    });
+
+    authWindow.loadURL(authUrl);
+    
+    // Also spoof UA for auth window just for consistency
+    const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    authWindow.webContents.setUserAgent(desktopUA);
+
+    authWindow.once('ready-to-show', () => {
+      authWindow.show();
+    });
+
+    // Intercept navigation to loopback callback
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      handleCallback(url);
+    });
+
+    authWindow.webContents.on('will-redirect', (event, url) => {
+      handleCallback(url);
+    });
+    
+    authWindow.webContents.on('did-navigate', (event, url) => {
+      handleCallback(url);
+    });
+
+    function handleCallback(url) {
+      if (url.startsWith('http://127.0.0.1:8888/callback')) {
+        const urlObj = new URL(url);
+        const code = urlObj.searchParams.get('code');
+        const error = urlObj.searchParams.get('error');
+
+        if (code) {
+          resolve(code);
+        } else if (error) {
+          reject(new Error(error));
+        }
+        
+        if (authWindow) {
+          authWindow.close();
+        }
+      }
+    }
+
+    authWindow.on('closed', () => {
+      authWindow = null;
+      reject(new Error('Auth window closed by user'));
+    });
+  });
+});
+
+ipcMain.handle('spotify-logout', async () => {
+  try {
+    await session.defaultSession.clearStorageData({
+      storages: ['cookies']
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to clear session data:', error);
+    return false;
+  }
 });
 
 app.on('window-all-closed', function () {

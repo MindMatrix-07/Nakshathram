@@ -18,7 +18,6 @@ function logToBox(message, type = 'info') {
   entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
   debugLogContent.appendChild(entry);
   debugLogContent.scrollTop = debugLogContent.scrollHeight;
-  if (debugLogBox) debugLogBox.classList.remove('hidden');
 }
 
 // Override console
@@ -45,7 +44,14 @@ console.log('Nakshathram Editor Initialized');
 const btnMore = document.getElementById('btn-more');
 const moreMenu = document.getElementById('more-menu');
 
-let selectedCorrection = null;
+let selectedCorrections = []; // Array for multi-selection
+let lastCorrectionRange = null; // Store range for precise replacement
+
+// Ghost Character Customization State
+let ghostFontSize = 64;
+let ghostOffsetX = 0;
+let ghostOffsetY = 0;
+
 const toggleSuggestions = document.getElementById('toggle-suggestions');
 const btnLangSelector = document.getElementById('btn-lang-selector');
 const langMenu = document.getElementById('lang-menu');
@@ -61,6 +67,8 @@ const btnNewFileMain = document.getElementById('btn-new-file-main');
 const newFileMenu = document.getElementById('new-file-menu');
 const btnCreateNew = document.getElementById('btn-create-new');
 const btnSelectFile = document.getElementById('btn-select-file');
+const btnSaveTxt = document.getElementById('btn-save-txt');
+const btnShareTxt = document.getElementById('btn-share-txt');
 const listToday = document.getElementById('file-list-today');
 const listYesterday = document.getElementById('file-list-yesterday');
 const listEarlier = document.getElementById('file-list-earlier');
@@ -85,11 +93,37 @@ const btnSubmitWord = document.getElementById('btn-submit-word');
 const inputPattern = document.getElementById('input-pattern');
 const inputWord = document.getElementById('input-word');
 const wordTableBody = document.getElementById('word-table-body');
+const btnClearCustomDict = document.getElementById('btn-clear-custom-dict');
 const btnAiDashboard = document.getElementById('btn-ai-dashboard');
 const aiDashboardModal = document.getElementById('ai-dashboard-modal');
 const btnCloseAiModal = document.getElementById('btn-close-ai-modal');
 const btnClearAiMemory = document.getElementById('btn-clear-ai-memory');
 const aiWordTableBody = document.getElementById('ai-word-table-body');
+
+// Plugins Modal Elements
+const btnPluginsTarget = document.getElementById('btn-plugins');
+const pluginsModal = document.getElementById('plugins-modal');
+const btnClosePluginsModal = document.getElementById('btn-close-plugins-modal');
+
+// Spotify Plugin Elements
+const spotifySetupPhase = document.getElementById('spotify-setup-phase');
+const spotifyLoginPhase = document.getElementById('spotify-login-phase');
+const spotifyPlayerPhase = document.getElementById('spotify-player-phase');
+const spotifyClientIdInput = document.getElementById('spotify-client-id-input');
+const btnSaveSpotifyKey = document.getElementById('btn-save-spotify-key');
+const btnEditSpotifyKey = document.getElementById('btn-edit-spotify-key');
+const btnSpotifyLogin = document.getElementById('btn-spotify-login');
+const btnSpotifyLogout = document.getElementById('btn-spotify-logout');
+const spotifySearchInput = document.getElementById('spotify-search-input');
+const btnSpotifySearch = document.getElementById('btn-spotify-search');
+const spotifySearchResults = document.getElementById('spotify-search-results');
+const spotifyEmbedContainer = document.getElementById('spotify-embed-container');
+const linkSpotifyDev = document.getElementById('link-spotify-dev');
+const spotifyWidget = document.getElementById('spotify-widget');
+
+// Main View Elements
+const cardSpotify = document.getElementById('card-spotify');
+const editorSpotifyPlayer = document.getElementById('editor-spotify-player');
 
 let currentLang = localStorage.getItem('last_selected_lang') || 'ml'; // Active Indian language
 let isEnglishMode = localStorage.getItem('last_is_english_mode') === 'true'; // Toggle between English and the current Indian language
@@ -99,11 +133,21 @@ let isTranslating = false;
 let lastTranslitData = {
   english: '',
   malayalam: '',
-  selectionPath: null // Used to re-select the word if needed
+  candidates: [],
+  selectionPath: null, // Used to re-select the word if needed
+  justTransliterated: false, // Flag for AI unlearning
+  correctionRange: null // The exact text node range for correction replacement
 };
 
-// Custom words state
-let customWords = JSON.parse(localStorage.getItem('manglish_custom_words') || '[]');
+// Custom words state - Refactored for language grouping
+let customWordsData = JSON.parse(localStorage.getItem('manglish_custom_words') || '{}');
+// Migration: check if it was an array (old format)
+if (Array.isArray(customWordsData)) {
+  const oldWords = customWordsData;
+  customWordsData = { 'ml': oldWords };
+  localStorage.setItem('manglish_custom_words', JSON.stringify(customWordsData));
+}
+let customWords = customWordsData[currentLang] || [];
 
 const languages = {
   'ml': { name: 'മലയാളം', googleCode: 'ml-t-i0-und' },
@@ -160,6 +204,11 @@ function syncLanguageUI() {
       item.classList.remove('active');
     }
   });
+
+  // Update Add Words modal placeholder based on language
+  if (inputWord && languages[currentLang]) {
+    inputWord.placeholder = `Word in ${languages[currentLang].name}`;
+  }
 }
 
 // Focus editor and sync UI on load
@@ -168,6 +217,10 @@ window.addEventListener('DOMContentLoaded', () => {
   editor.focus();
 });
 
+// Secret Debug Toggle State
+let secretBuffer = [];
+const secretHash = "NzM3MzkxNTczNzM5MTUj"; // Base64 for 73739157373915#
+
 // Transliteration trigger
 editor.addEventListener('keyup', async (e) => {
   if (isEnglishMode) return;
@@ -175,6 +228,56 @@ editor.addEventListener('keyup', async (e) => {
   // We trigger on Space (code: Space) and Enter (code: Enter)
   if (e.code === 'Space' || e.code === 'Enter') {
     await handleTransliteration(e.code === 'Space' ? ' ' : '\n');
+  }
+});
+
+// AI Unlearning via Backspace and Secret Debug logic
+editor.addEventListener('keydown', (e) => {
+  // --- Secret Debug Trigger Logic (Global regardless of mode) ---
+  if (e.key && e.key.length === 1) { // letters, numbers, symbols
+    secretBuffer.push(e.key);
+    if (secretBuffer.length > 15) {
+      secretBuffer.shift();
+    }
+    if (secretBuffer.length === 15) {
+      if (btoa(secretBuffer.join('')) === secretHash) {
+        if (debugLogBox) debugLogBox.classList.toggle('hidden');
+        secretBuffer = []; // Reset buffer
+      }
+    }
+  }
+
+  if (isEnglishMode) return;
+
+  if (e.key === 'Backspace') {
+    if (lastTranslitData && lastTranslitData.justTransliterated) {
+      // User erased immediately after transliteration! Unlearn from AI memory.
+      const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+      const learned = migrateAiMemory(aiMemory);
+      const pattern = lastTranslitData.english.toLowerCase();
+      const word = lastTranslitData.malayalam;
+      
+      if (learned[currentLang] && learned[currentLang][pattern] && learned[currentLang][pattern][word]) {
+        learned[currentLang][pattern][word] -= 1; // Decrement score
+        
+        if (learned[currentLang][pattern][word] <= 0) {
+          delete learned[currentLang][pattern][word];
+          if (Object.keys(learned[currentLang][pattern]).length === 0) {
+             delete learned[currentLang][pattern];
+          }
+        }
+        localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
+        console.log(`Unlearned: ${pattern} -> ${word}`);
+      }
+      
+      // Reset flag to prevent multiple decrements
+      lastTranslitData.justTransliterated = false;
+    }
+  } else if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta' && e.code !== 'Space' && e.code !== 'Enter') {
+    // If they typed something else, they moved on
+    if (lastTranslitData) {
+      lastTranslitData.justTransliterated = false;
+    }
   }
 });
 
@@ -248,6 +351,37 @@ editor.addEventListener('input', async () => {
   }
 });
 
+async function fetchCandidates(word, lang) {
+  const langConfig = languages[lang];
+  if (!langConfig) return [];
+  
+  try {
+    const [varnamRes, googleRes] = await Promise.all([
+      fetch(`https://api.varnamproject.com/tl/${lang}/${word}`).catch(() => null),
+      fetch(`https://inputtools.google.com/request?text=${word}&itc=${langConfig.googleCode}&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=editor`).catch(() => null)
+    ]);
+
+    let varnamWords = [];
+    if (varnamRes && varnamRes.ok) {
+      const data = await varnamRes.json();
+      if (data.success && data.result) varnamWords = data.result;
+    }
+
+    let searchEngineWords = [];
+    if (googleRes && googleRes.ok) {
+      const gData = await googleRes.json();
+      if (gData[0] === 'SUCCESS' && gData[1] && gData[1][0] && gData[1][0][1]) {
+        searchEngineWords = gData[1][0][1];
+      }
+    }
+
+    return [...new Set([...searchEngineWords, ...varnamWords])];
+  } catch (e) {
+    console.error("Fetch candidates error:", e);
+    return [];
+  }
+}
+
 async function handleTransliteration(triggerChar, forcedReplacement = null) {
   if (isTranslating) return;
 
@@ -297,43 +431,24 @@ async function handleTransliteration(triggerChar, forcedReplacement = null) {
         malayalamWord = customMatch.word;
       } else {
         // Fetch from both APIs for the final space/enter replacement
-        try {
-          const langConfig = languages[currentLang];
-          const [varnamRes, googleRes] = await Promise.all([
-            fetch(`https://api.varnamproject.com/tl/${currentLang}/${wordToTranslate}`).catch(() => null),
-            fetch(`https://inputtools.google.com/request?text=${wordToTranslate}&itc=${langConfig.googleCode}&num=3&cp=0&cs=1&ie=utf-8&oe=utf-8&app=editor`).catch(() => null)
-          ]);
-
-          let bestMatch = null;
-
-          if (googleRes && googleRes.ok) {
-            const gData = await googleRes.json();
-            if (gData[0] === 'SUCCESS' && gData[1] && gData[1][0] && gData[1][0][1]) {
-              bestMatch = gData[1][0][1][0]; // Top search-engine result
-            }
-          }
-
-          if (!bestMatch && varnamRes && varnamRes.ok) {
-            const vData = await varnamRes.json();
-            if (vData.success && vData.result && vData.result.length > 0) {
-              bestMatch = vData.result[0];
-            }
-          }
-
-          malayalamWord = bestMatch;
-        } catch (e) {
-          console.error("Transliteration fetch error:", e);
-        }
+        const allCandidates = await fetchCandidates(wordToTranslate, currentLang);
+        malayalamWord = allCandidates[0];
+        
+        // Store for correction modal
+        lastTranslitData.candidates = allCandidates;
       }
     }
 
     if (malayalamWord) {
       // Local AI Learning - Boost future suggestions
-      const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-      if (!learned[lowercaseWord]) {
-        learned[lowercaseWord] = {};
-      }
-      learned[lowercaseWord][malayalamWord] = (learned[lowercaseWord][malayalamWord] || 0) + 1;
+      const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+      // Migration: check if old flat format
+      const learned = migrateAiMemory(aiMemory);
+      
+      if (!learned[currentLang]) learned[currentLang] = {};
+      if (!learned[currentLang][lowercaseWord]) learned[currentLang][lowercaseWord] = {};
+      
+      learned[currentLang][lowercaseWord][malayalamWord] = (learned[currentLang][lowercaseWord][malayalamWord] || 0) + 1;
       localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
 
       // Create a range that selects exactly the typed English word
@@ -358,10 +473,17 @@ async function handleTransliteration(triggerChar, forcedReplacement = null) {
       selection.addRange(newRange);
       selection.modify("move", "forward", "character");
 
-      // Store data for "Is it correct?" feature
+      // Save the exact range covering the newly inserted word for the correction modal
+      const wordRange = document.createRange();
+      wordRange.selectNodeContents(textNode);
+
+      // Store data for "Is it correct?" feature and unlearning
       lastTranslitData = {
         english: wordToTranslate,
-        malayalam: malayalamWord
+        malayalam: malayalamWord,
+        candidates: lastTranslitData.candidates || [],
+        justTransliterated: true, // Flag for AI unlearning
+        correctionRange: wordRange
       };
       console.log(`Transliterated: ${wordToTranslate} -> ${malayalamWord}`);
       document.getElementById('btn-is-correct').classList.remove('hidden');
@@ -468,19 +590,48 @@ if (btnCopy) {
 
 function renderWordTable() {
   if (!wordTableBody) return;
-  if (customWords.length === 0) {
-    wordTableBody.innerHTML = `<tr><td colspan="2" class="empty-data">No data available</td></tr>`;
+  const wordsForCurrentLang = customWordsData[currentLang] || [];
+  
+  if (wordsForCurrentLang.length === 0) {
+    wordTableBody.innerHTML = `<tr><td colspan="3" class="empty-data">No custom words added for this language.</td></tr>`;
     return;
   }
   
   wordTableBody.innerHTML = '';
-  customWords.forEach(({ pattern, word }) => {
+  wordsForCurrentLang.forEach(({ pattern, word }, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${word}</td>
       <td>${pattern}</td>
+      <td style="text-align: center;">
+        <button class="delete-btn" onclick="deleteCustomWord(${index})">
+          <span class="material-symbols-outlined" style="font-size: 1.2rem; color: #ff7b72;">delete</span>
+        </button>
+      </td>
     `;
     wordTableBody.appendChild(row);
+  });
+}
+
+window.deleteCustomWord = (index) => {
+  if (confirm('Delete this word from dictionary?')) {
+    customWordsData[currentLang].splice(index, 1);
+    localStorage.setItem('manglish_custom_words', JSON.stringify(customWordsData));
+    customWords = customWordsData[currentLang];
+    renderWordTable();
+  }
+};
+
+if (btnClearCustomDict) {
+  btnClearCustomDict.addEventListener('click', () => {
+    const langName = languages[currentLang] ? languages[currentLang].name : currentLang;
+    if (confirm(`Are you sure you want to delete ALL custom words for ${langName}? This cannot be undone.`)) {
+      customWordsData[currentLang] = [];
+      localStorage.setItem('manglish_custom_words', JSON.stringify(customWordsData));
+      customWords = [];
+      renderWordTable();
+      alert(`Dictionary cleared for ${langName}.`);
+    }
   });
 }
 
@@ -490,7 +641,12 @@ renderWordTable();
 if (btnAddWordTarget) {
   btnAddWordTarget.addEventListener('click', () => {
     addWordModal.classList.remove('hidden');
-    if (inputWord) inputWord.focus();
+    // Dynamically set placeholder just in case
+    if (inputWord && languages[currentLang]) {
+      inputWord.placeholder = `Word in ${languages[currentLang].name}`;
+    }
+    // Focus the 'Pattern' input instead of the 'Word' input per user request
+    if (inputPattern) inputPattern.focus();
   });
 }
 
@@ -516,9 +672,11 @@ if (btnSubmitWord) {
 
     if (pattern && word) {
       // Add to array
-      customWords.unshift({ pattern, word });
+      if (!customWordsData[currentLang]) customWordsData[currentLang] = [];
+      customWordsData[currentLang].unshift({ pattern, word });
       // Save to local storage
-      localStorage.setItem('manglish_custom_words', JSON.stringify(customWords));
+      localStorage.setItem('manglish_custom_words', JSON.stringify(customWordsData));
+      customWords = customWordsData[currentLang];
       
       renderWordTable();
       
@@ -639,6 +797,10 @@ langItems.forEach(item => {
     currentLang = langCode;
     localStorage.setItem('last_selected_lang', langCode);
     
+    // Refresh tables for the new language
+    customWords = customWordsData[currentLang] || [];
+    renderWordTable();
+    
     // Switch to Indian language mode automatically
     isEnglishMode = false;
     localStorage.setItem('last_is_english_mode', false);
@@ -646,6 +808,17 @@ langItems.forEach(item => {
     syncLanguageUI();
     langMenu.classList.add('hidden');
     editor.focus();
+
+    // If correction modal is open or a word was just typed, refresh candidates
+    if (lastTranslitData.english) {
+      fetchCandidates(lastTranslitData.english, currentLang).then(cands => {
+        lastTranslitData.candidates = cands;
+        // If results are currently showing in modal, refresh them automatically
+        if (!isCorrectModal.classList.contains('hidden') && !correctionResults.classList.contains('hidden')) {
+          runCorrectionVerification();
+        }
+      });
+    }
   });
 });
 
@@ -666,8 +839,23 @@ if (btnClose) {
 }
 
 // -------- AI Dashboard Logic --------
+function migrateAiMemory(data) {
+  // If the data has keys that are not likely language codes (e.g. they are patterns), 
+  // it means it's the old format.
+  const langCodes = Object.keys(languages);
+  const firstKey = Object.keys(data)[0];
+  if (firstKey && !langCodes.includes(firstKey)) {
+    // Old format detected
+    const migrated = { 'ml': data };
+    localStorage.setItem('manglish_ai_learning', JSON.stringify(migrated));
+    return migrated;
+  }
+  return data;
+}
+
 function renderAiWordTable() {
-  const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+  const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+  const learned = migrateAiMemory(aiMemory)[currentLang] || {};
   const entries = [];
 
   for (const pattern in learned) {
@@ -684,7 +872,7 @@ function renderAiWordTable() {
   entries.sort((a, b) => b.frequency - a.frequency);
 
   if (entries.length === 0) {
-    aiWordTableBody.innerHTML = `<tr><td colspan="3" class="empty-data">No learned data available yet. Start typing to train the AI!</td></tr>`;
+    aiWordTableBody.innerHTML = `<tr><td colspan="4" class="empty-data">No learned data available for this language.</td></tr>`;
     return;
   }
 
@@ -695,10 +883,30 @@ function renderAiWordTable() {
       <td>${entry.pattern}</td>
       <td>${entry.word}</td>
       <td>${entry.frequency}</td>
+      <td style="text-align: center;">
+        <button class="delete-btn" onclick="deleteAiWord('${entry.pattern}', '${entry.word}')">
+          <span class="material-symbols-outlined" style="font-size: 1.2rem; color: #ff7b72;">delete</span>
+        </button>
+      </td>
     `;
     aiWordTableBody.appendChild(row);
   });
 }
+
+window.deleteAiWord = (pattern, word) => {
+  if (confirm(`Delete "${word}" from AI memory?`)) {
+    const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+    const learned = migrateAiMemory(aiMemory);
+    if (learned[currentLang] && learned[currentLang][pattern]) {
+      delete learned[currentLang][pattern][word];
+      if (Object.keys(learned[currentLang][pattern]).length === 0) {
+        delete learned[currentLang][pattern];
+      }
+      localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
+      renderAiWordTable();
+    }
+  }
+};
 
 if (btnAiDashboard) {
   btnAiDashboard.addEventListener('click', () => {
@@ -1016,18 +1224,23 @@ function initCanvas() {
   const malayalamWord = lastTranslitData.malayalam || '';
   const charCount = malayalamWord.length;
   
-  // Calculate dynamic width: min 300, max 600, ~70px per char
-  const dynamicWidth = Math.min(600, Math.max(300, charCount * 70));
+  // Calculate dynamic width: min 400, max 800, ~100px per char for better spacing
+  const dynamicWidth = Math.min(800, Math.max(400, charCount * 100));
   
-  // Set container width
-  const container = drawingCanvas.parentElement;
-  if (container) {
-    container.style.width = dynamicWidth + 'px';
-  }
+  // Set container widths explicitly to avoid protrusion
+  const container = drawingCanvas.parentElement; // .canvas-container
+  const canvasArea = document.querySelector('.canvas-area');
+  const horizontalRow = document.querySelector('.horizontal-control-row');
+  
+  if (container) container.style.width = dynamicWidth + 'px';
+  if (canvasArea) canvasArea.style.width = dynamicWidth + 'px';
+  if (horizontalRow) horizontalRow.style.width = dynamicWidth + 'px';
 
   // Set internal resolution for the canvas
   drawingCanvas.width = dynamicWidth;
-  drawingCanvas.height = 300; 
+  drawingCanvas.height = 400; 
+  
+  logToBox(`Canvas initialized: ${drawingCanvas.width}x${drawingCanvas.height}`);
   
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -1061,35 +1274,119 @@ if (btnEraser) {
   });
 }
 
-function clearCanvas() {
+
+function refreshCanvas() {
   ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
   
+  // 1. Draw ghost text
   if (lastTranslitData && lastTranslitData.malayalam) {
-    // Save current state
     const currentComp = ctx.globalCompositeOperation;
     const currentStyle = ctx.fillStyle;
     
-    // Draw ghost text
     ctx.globalCompositeOperation = 'source-over';
-    ctx.font = '64px "Noto Sans Malayalam", "Inter", sans-serif';
+    ctx.font = `${ghostFontSize}px "Noto Sans Malayalam", "Inter", sans-serif`;
     ctx.fillStyle = '#58a6ff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(lastTranslitData.malayalam, drawingCanvas.width / 2, drawingCanvas.height / 2);
     
-    // Restore state
+    const centerX = drawingCanvas.width / 2 + ghostOffsetX;
+    const centerY = drawingCanvas.height / 2 + ghostOffsetY;
+    ctx.fillText(lastTranslitData.malayalam, centerX, centerY);
+    
     ctx.globalCompositeOperation = currentComp;
     ctx.fillStyle = currentStyle;
   }
-  
+
+  // 2. Draw existing strokes
+  const currentComp = ctx.globalCompositeOperation;
+  const currentStroke = ctx.strokeStyle;
+  const currentWidth = ctx.lineWidth;
+
+  // Ensure we draw strokes in source-over mode even if eraser was active
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 4;
+
+  strokes.forEach(stroke => {
+    if (stroke[0].length < 1) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0][0], stroke[1][0]);
+    for (let i = 1; i < stroke[0].length; i++) {
+      ctx.lineTo(stroke[0][i], stroke[1][i]);
+    }
+    ctx.stroke();
+  });
+
+  ctx.globalCompositeOperation = currentComp;
+  ctx.strokeStyle = currentStroke;
+  ctx.lineWidth = currentWidth;
+}
+
+function clearCanvas() {
   strokes = [];
+  selectedCorrections = [];
+  if (resultsList) resultsList.innerHTML = '';
+  if (correctionResults) correctionResults.classList.add('hidden');
+  if (btnVerifyUpdate) {
+    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Verify & Update`;
+    btnVerifyUpdate.classList.remove('pulse-animation');
+  }
+  refreshCanvas();
 }
 
 if (btnIsCorrect) {
   btnIsCorrect.addEventListener('click', () => {
     displayEnglishWord.textContent = lastTranslitData.english;
+    
+    // Reset modal state for the new word
+    resultsList.innerHTML = '';
+    correctionResults.classList.add('hidden');
+    selectedCorrections = [];
+    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Verify & Update`;
+    btnVerifyUpdate.classList.remove('pulse-animation');
+    
     isCorrectModal.classList.remove('hidden');
     initCanvas();
+  });
+}
+
+// -------- Ghost Customization Listeners --------
+
+const ghostSizeInput = document.getElementById('ghost-size');
+const ghostXInput = document.getElementById('ghost-x');
+const ghostYInput = document.getElementById('ghost-y');
+const btnResetGhost = document.getElementById('btn-reset-ghost');
+
+if (ghostSizeInput) {
+  ghostSizeInput.addEventListener('input', (e) => {
+    ghostFontSize = parseInt(e.target.value);
+    refreshCanvas();
+  });
+}
+
+if (ghostXInput) {
+  ghostXInput.addEventListener('input', (e) => {
+    ghostOffsetX = parseInt(e.target.value);
+    refreshCanvas();
+  });
+}
+
+if (ghostYInput) {
+  ghostYInput.addEventListener('input', (e) => {
+    ghostOffsetY = parseInt(e.target.value);
+    refreshCanvas();
+  });
+}
+
+if (btnResetGhost) {
+  btnResetGhost.addEventListener('click', () => {
+    ghostFontSize = 64;
+    ghostOffsetX = 0;
+    ghostOffsetY = 0;
+    if (ghostSizeInput) ghostSizeInput.value = 64;
+    if (ghostXInput) ghostXInput.value = 0;
+    if (ghostYInput) ghostYInput.value = 0;
+    refreshCanvas();
   });
 }
 
@@ -1110,13 +1407,20 @@ drawingCanvas.addEventListener('mousedown', (e) => {
   const scaleX = drawingCanvas.width / rect.width;
   const scaleY = drawingCanvas.height / rect.height;
   
-  // Offset by hotspot (0, 20) in visual pixels
+  // No offset needed: clientX/Y centers on the hotspot (0, 20)
   const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top - 20) * scaleY;
+  const y = (e.clientY - rect.top) * scaleY;
   
   ctx.beginPath();
   ctx.moveTo(x, y);
   strokes.push([[x], [y], [Date.now()]]); 
+
+  // Reset selection if user starts drawing again
+  if (selectedCorrections.length > 0) {
+    selectedCorrections = [];
+    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Verify & Update`;
+    btnVerifyUpdate.classList.remove('pulse-animation');
+  }
 });
 
 drawingCanvas.addEventListener('mousemove', (e) => {
@@ -1125,9 +1429,9 @@ drawingCanvas.addEventListener('mousemove', (e) => {
   const scaleX = drawingCanvas.width / rect.width;
   const scaleY = drawingCanvas.height / rect.height;
   
-  // Offset by hotspot (0, 20) in visual pixels
+  // No offset needed
   const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top - 20) * scaleY;
+  const y = (e.clientY - rect.top) * scaleY;
   
   ctx.lineTo(x, y);
   ctx.stroke();
@@ -1158,12 +1462,13 @@ async function recognizeHandwriting() {
         writing_area_height: drawingCanvas.height
       },
       ink: strokes,
-      language: currentLang
+      language: currentLang,
+      pre_context: lastTranslitData.malayalam || ''
     }]
   };
 
   try {
-    const url = `https://inputtools.google.com/request?itc=${handwritingITC}&app=autofill`;
+    const url = `https://inputtools.google.com/request?itc=${handwritingITC}&app=editor&num=5`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1184,113 +1489,498 @@ async function recognizeHandwriting() {
 if (btnVerifyUpdate) {
   btnVerifyUpdate.addEventListener('click', async () => {
     // If we already have a selection, this button acts as "Update"
-    if (selectedCorrection) {
-      updateWithCorrection(selectedCorrection);
+    if (selectedCorrections.length > 0) {
+      updateWithCorrection(selectedCorrections.join(''));
       isCorrectModal.classList.add('hidden');
       return;
     }
 
-    btnVerifyUpdate.disabled = true;
-    const originalText = btnVerifyUpdate.innerHTML;
-    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">sync</span> Verifying...`;
-    
-    // Clear previous results
-    resultsList.innerHTML = '';
-    correctionResults.classList.add('hidden');
-    selectedCorrection = null;
-
-    const candidates = await recognizeHandwriting();
-    
-    if (candidates && candidates.length > 0) {
-      correctionResults.classList.remove('hidden');
-      candidates.forEach((word, index) => {
-        const chip = document.createElement('div');
-        chip.className = 'result-chip';
-        chip.textContent = word;
-        chip.addEventListener('click', () => {
-          // Highlight selection
-          document.querySelectorAll('.result-chip').forEach(c => c.classList.remove('selected'));
-          chip.classList.add('selected');
-          
-          selectedCorrection = word;
-          btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Update Editor`;
-          btnVerifyUpdate.classList.add('pulse-animation'); // Optional visual cue
-        });
-        resultsList.appendChild(chip);
-      });
-      
-      // Auto-select first one as default but require "Update" click
-      // (Or let user pick)
-      btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">touch_app</span> Pick a Word`;
-
-    } else {
-      alert("No handwriting detected or recognition failed. Please try again.");
-    }
-    
-    btnVerifyUpdate.disabled = false;
+    await runCorrectionVerification();
   });
 }
 
-function updateWithCorrection(newWord) {
-  const selection = window.getSelection();
-  if (!selection.rangeCount) return;
+async function runCorrectionVerification() {
+  if (!btnVerifyUpdate) return;
   
-  const range = selection.getRangeAt(0);
-  const node = range.startContainer;
+  btnVerifyUpdate.disabled = true;
+  const originalText = btnVerifyUpdate.innerHTML;
+  btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">sync</span> Verifying...`;
   
-  if (node.nodeType === Node.TEXT_NODE) {
-    const text = node.textContent;
-    const lastWord = lastTranslitData.malayalam;
-    
-    // Find last index of the word before current cursor
-    // More robust matching: search globally in the editor if current node fails
-    let lastIdx = text.lastIndexOf(lastWord, selection.focusOffset);
-    if (lastIdx === -1) {
-       // Try without offset constraint if fails
-       lastIdx = text.lastIndexOf(lastWord);
+  // Clear previous results
+  resultsList.innerHTML = '';
+  correctionResults.classList.add('hidden');
+  selectedCorrections = [];
+
+  const handwritingCandidates = await recognizeHandwriting() || [];
+  const translitCandidates = lastTranslitData.candidates || [];
+  
+  // Merge candidates, removing duplicates
+  let candidates = [...new Set([...handwritingCandidates, ...translitCandidates])];
+
+  if (candidates.length > 0) {
+    // Add the ghost word itself as an option (useful for minor additions/strokes)
+    if (lastTranslitData.malayalam && !candidates.includes(lastTranslitData.malayalam)) {
+      candidates.unshift(lastTranslitData.malayalam);
     }
 
-    if (lastIdx !== -1) {
-      console.log(`Replacing "${lastWord}" with "${newWord}" at index ${lastIdx}`);
-      const newText = text.substring(0, lastIdx) + newWord + text.substring(lastIdx + lastWord.length);
-      node.textContent = newText;
-      
-      // Reset cursor position
-      const newRange = document.createRange();
-      newRange.setStart(node, lastIdx + newWord.length);
-      newRange.setEnd(node, lastIdx + newWord.length);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    } else {
-      console.error(`Could not find "${lastWord}" in current node text.`);
-      // Fallback: Try to find in the entire editor if possible
-      if (editor.innerText.includes(lastWord)) {
-        console.log("Found word in editor full text, but not in current node. Correcting...");
-        editor.innerText = editor.innerText.replace(new RegExp(lastWord + "$"), newWord);
-      }
+    correctionResults.classList.remove('hidden');
+    candidates.forEach((word, index) => {
+      const chip = document.createElement('div');
+      chip.className = 'result-chip';
+      chip.textContent = word;
+      chip.addEventListener('click', () => {
+        // Toggle selection
+        if (selectedCorrections.includes(word)) {
+          selectedCorrections = selectedCorrections.filter(c => c !== word);
+          chip.classList.remove('selected');
+        } else {
+          selectedCorrections.push(word);
+          chip.classList.add('selected');
+        }
+        
+        if (selectedCorrections.length > 0) {
+          const combined = selectedCorrections.join('');
+          btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Update "${combined}"`;
+          btnVerifyUpdate.classList.add('pulse-animation'); 
+        } else {
+          btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">touch_app</span> Pick words to join`;
+          btnVerifyUpdate.classList.remove('pulse-animation');
+        }
+      });
+      resultsList.appendChild(chip);
+    });
+    
+    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">touch_app</span> Pick words to join`;
+
+  } else if (strokes.length > 0) {
+    alert("No handwriting detected or recognition failed. Please try again.");
+  } else {
+    // If no strokes, just show transliteration candidates if available
+    if (translitCandidates.length > 0) {
+       // Re-run the loop for translit only
+       correctionResults.classList.remove('hidden');
+       translitCandidates.forEach(word => {
+          const chip = document.createElement('div');
+          chip.className = 'result-chip';
+          chip.textContent = word;
+          chip.addEventListener('click', () => {
+             // Toggle selection
+            if (selectedCorrections.includes(word)) {
+              selectedCorrections = selectedCorrections.filter(c => c !== word);
+              chip.classList.remove('selected');
+            } else {
+              selectedCorrections.push(word);
+              chip.classList.add('selected');
+            }
+            
+            if (selectedCorrections.length > 0) {
+              const combined = selectedCorrections.join('');
+              btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Update "${combined}"`;
+              btnVerifyUpdate.classList.add('pulse-animation'); 
+            } else {
+              btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">touch_app</span> Pick words to join`;
+              btnVerifyUpdate.classList.remove('pulse-animation');
+            }
+          });
+          resultsList.appendChild(chip);
+       });
     }
   }
+  
+  btnVerifyUpdate.disabled = false;
+}
+
+function updateWithCorrection(newWord) {
+  const range = lastTranslitData.correctionRange;
+  
+  if (!range) {
+    console.error("No valid correction range captured.");
+    alert("Could not locate the word to replace. Please manually correct it.");
+    return;
+  }
+
+  // To avoid `innerText` replacement which destroys formatting, we carefully update the node
+  const textNode = range.startContainer;
+  if (textNode.nodeType === Node.TEXT_NODE) {
+    range.deleteContents();
+    const newTextNode = document.createTextNode(newWord);
+    range.insertNode(newTextNode);
+    
+    // Position cursor after the newly inserted correction
+    const selection = window.getSelection();
+    const newCursorRange = document.createRange();
+    newCursorRange.setStart(newTextNode, newTextNode.length);
+    newCursorRange.setEnd(newTextNode, newTextNode.length);
+    selection.removeAllRanges();
+    selection.addRange(newCursorRange);
+  } else {
+    // Fallback if somehow it's an element node
+    range.deleteContents();
+    const newTextNode = document.createTextNode(newWord);
+    range.insertNode(newTextNode);
+  }
+  
+  // Clear the range references after use
+  lastTranslitData.correctionRange = null;
 
   // Persist the correction
   const pattern = lastTranslitData.english.toLowerCase();
   
   // Update Custom Words
-  customWords.unshift({ pattern, word: newWord });
-  localStorage.setItem('manglish_custom_words', JSON.stringify(customWords));
+  if (!customWordsData[currentLang]) customWordsData[currentLang] = [];
+  customWordsData[currentLang].unshift({ pattern, word: newWord });
+  localStorage.setItem('manglish_custom_words', JSON.stringify(customWordsData));
+  customWords = customWordsData[currentLang];
   renderWordTable();
 
   // Update AI Learning
-  const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-  if (!learned[pattern]) learned[pattern] = {};
-  learned[pattern][newWord] = (learned[pattern][newWord] || 0) + 10; 
+  const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+  const learned = migrateAiMemory(aiMemory);
+  
+  if (!learned[currentLang]) learned[currentLang] = {};
+  if (!learned[currentLang][pattern]) learned[currentLang][pattern] = {};
+  learned[currentLang][pattern][newWord] = (learned[currentLang][pattern][newWord] || 0) + 10; 
   localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
 
   btnIsCorrect.classList.add('hidden');
 }
 
+
+// -------- File Menu Actions --------
+
+if (btnNewFileMain && newFileMenu) {
+  btnNewFileMain.addEventListener('click', (e) => {
+    e.stopPropagation();
+    newFileMenu.classList.toggle('hidden');
+  });
+}
+
+// Close New File menu when clicking outside of it
+document.addEventListener('click', (e) => {
+  if (newFileMenu && !newFileMenu.classList.contains('hidden')) {
+    if (btnNewFileMain && !btnNewFileMain.contains(e.target) && !newFileMenu.contains(e.target)) {
+      newFileMenu.classList.add('hidden');
+    }
+  }
+});
+
+
+// -------- Plugins and Spotify Integrations Logic --------
+
+const SpotifyWebApi = require('spotify-web-api-node');
+
+let spotifyApi = new SpotifyWebApi();
+let spotifyAccessToken = null;
+let spotifyRefreshToken = localStorage.getItem('spotify_refresh_token');
+let spotifyClientId = localStorage.getItem('spotify_client_id');
+
+function updateSpotifyPluginUI() {
+  if (!spotifyClientId) {
+    // Phase 1: Setup
+    spotifySetupPhase.classList.remove('hidden');
+    spotifyLoginPhase.classList.add('hidden');
+    spotifyPlayerPhase.classList.add('hidden');
+  } else if (!spotifyAccessToken && !spotifyRefreshToken) {
+    // Phase 2: Login
+    spotifySetupPhase.classList.add('hidden');
+    spotifyLoginPhase.classList.remove('hidden');
+    spotifyPlayerPhase.classList.add('hidden');
+  } else {
+    // Phase 3: Player
+    spotifySetupPhase.classList.add('hidden');
+    spotifyLoginPhase.classList.add('hidden');
+    spotifyPlayerPhase.classList.remove('hidden');
+    
+    // Attempt Token Refresh if we have a refresh token but no active access token 
+    // (A real app would detect expiration, here we just do it eagerly on load if needed)
+    if (!spotifyAccessToken && spotifyRefreshToken) {
+       refreshSpotifyToken();
+    }
+  }
+}
+
+if (btnPluginsTarget && spotifyWidget) {
+  btnPluginsTarget.addEventListener('click', () => {
+    // If modal is already handled or if we just want to toggle the sidebar directly:
+    // User said "spotify search remain in sidebar if plugin is enabled"
+    // So let's show the modal first to choose, then stay in sidebar.
+    pluginsModal.classList.remove('hidden');
+  });
+}
+
+if (cardSpotify && pluginsModal) {
+  cardSpotify.addEventListener('click', () => {
+    pluginsModal.classList.add('hidden');
+    spotifyWidget.classList.remove('hidden'); // Show sidebar widget
+    updateSpotifyPluginUI();
+  });
+}
+
+// Ensure the sidebar widget is visible if already logged in / enabled
+if (spotifyAccessToken && spotifyWidget) {
+  spotifyWidget.classList.remove('hidden');
+}
+
+// Open Spotify Dev Dashboard
+if (linkSpotifyDev) {
+  linkSpotifyDev.addEventListener('click', (e) => {
+    e.preventDefault();
+    require('electron').shell.openExternal('https://developer.spotify.com/dashboard/');
+  });
+}
+
+// Save BYOK Client ID
+if (btnSaveSpotifyKey) {
+  btnSaveSpotifyKey.addEventListener('click', () => {
+    const key = spotifyClientIdInput.value.trim();
+    if (key) {
+      spotifyClientId = key;
+      localStorage.setItem('spotify_client_id', key);
+      updateSpotifyPluginUI();
+    } else {
+      alert("Please enter a valid Client ID.");
+    }
+  });
+}
+
+// Edit Client ID
+if (btnEditSpotifyKey) {
+  btnEditSpotifyKey.addEventListener('click', () => {
+    // Clear tokens because Client ID changed
+    spotifyAccessToken = null;
+    spotifyRefreshToken = null;
+    localStorage.removeItem('spotify_refresh_token');
+    
+    spotifyClientId = null;
+    localStorage.removeItem('spotify_client_id');
+    spotifyClientIdInput.value = '';
+    
+    updateSpotifyPluginUI();
+  });
+}
+
+// --- Spotify PKCE PKCE OAuth Flow Functions ---
+function generateRandomString(length) {
+  let text = '';
+  let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
+async function generateCodeChallenge(codeVerifier) {
+  const data = new TextEncoder().encode(codeVerifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+if (btnSpotifyLogin) {
+  btnSpotifyLogin.addEventListener('click', async () => {
+    if (!spotifyClientId) return;
+
+    const codeVerifier = generateRandomString(128);
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const redirectUri = 'http://127.0.0.1:8888/callback';
+    const scope = 'streaming user-read-email user-read-private user-library-read user-read-playback-state user-modify-playback-state user-top-read';
+    
+    const authUrl = new URL("https://accounts.spotify.com/authorize");
+    const params = {
+      response_type: 'code',
+      client_id: spotifyClientId,
+      scope: scope,
+      code_challenge_method: 'S256',
+      code_challenge: codeChallenge,
+      redirect_uri: redirectUri,
+    };
+    authUrl.search = new URLSearchParams(params).toString();
+
+    try {
+      btnSpotifyLogin.textContent = "Waiting for Login...";
+      btnSpotifyLogin.disabled = true;
+      
+      const code = await ipcRenderer.invoke('spotify-login', authUrl.toString());
+      
+      // Exchange code for token
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: spotifyClientId,
+        code_verifier: codeVerifier
+      });
+
+      const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body
+      });
+
+      if (!response.ok) {
+        throw new Error('Token exchange failed');
+      }
+
+      const data = await response.json();
+      spotifyAccessToken = data.access_token;
+      spotifyRefreshToken = data.refresh_token;
+      
+      localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
+      spotifyApi.setAccessToken(spotifyAccessToken);
+      
+      updateSpotifyPluginUI();
+      
+    } catch (error) {
+      console.error('Spotify Login Error:', error);
+      alert('Login failed: ' + error.message);
+    } finally {
+      btnSpotifyLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Login to Spotify';
+      btnSpotifyLogin.disabled = false;
+    }
+  });
+}
+
+async function refreshSpotifyToken() {
+  if (!spotifyClientId || !spotifyRefreshToken) return;
+  try {
+     const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: spotifyRefreshToken,
+        client_id: spotifyClientId
+     });
+
+     const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body
+     });
+     
+     if (!response.ok) {
+        throw new Error("Refresh failed. User must log in again.");
+     }
+     
+     const data = await response.json();
+     spotifyAccessToken = data.access_token;
+     
+     // Sometimes a new refresh token is returned
+     if (data.refresh_token) {
+        spotifyRefreshToken = data.refresh_token;
+        localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
+     }
+     
+     spotifyApi.setAccessToken(spotifyAccessToken);
+  } catch (error) {
+     console.error('Spotify token refresh error', error);
+     logoutSpotify(); // Token is likely revoked or invalid
+  }
+}
+
+async function logoutSpotify() {
+  spotifyAccessToken = null;
+  spotifyRefreshToken = null;
+  localStorage.removeItem('spotify_refresh_token');
+  spotifyApi.resetAccessToken();
+  spotifyApi.resetRefreshToken();
+  spotifySearchResults.innerHTML = '';
+  spotifySearchResults.classList.add('hidden');
+  spotifyEmbedContainer.innerHTML = '';
+  
+  // Clear Electron Session Cookies
+  await ipcRenderer.invoke('spotify-logout');
+  
+  updateSpotifyPluginUI();
+}
+
+if (btnSpotifyLogout) {
+  btnSpotifyLogout.addEventListener('click', logoutSpotify);
+}
+
+// Search and Play logic
+if (btnSpotifySearch) {
+  btnSpotifySearch.addEventListener('click', async () => {
+     if (!spotifyAccessToken) return;
+     const query = spotifySearchInput.value.trim();
+     if (!query) return;
+
+     try {
+       const data = await spotifyApi.searchTracks(query, { limit: 5 });
+       const tracks = data.body.tracks.items;
+       
+       spotifySearchResults.innerHTML = '';
+       
+       if (tracks.length === 0) {
+          spotifySearchResults.innerHTML = '<div style="padding: 10px; color: grey;">No results found.</div>';
+       } else {
+          tracks.forEach(track => {
+             const div = document.createElement('div');
+             div.className = 'spotify-song-item';
+             
+             const imgUrl = track.album.images.length > 0 ? track.album.images[track.album.images.length - 1].url : 'https://placehold.co/40';
+             const artistName = track.artists[0] ? track.artists[0].name : 'Unknown Artist';
+             
+             div.innerHTML = `
+                <img src="${imgUrl}" class="spotify-song-img" alt="Cover">
+                <div class="spotify-song-info">
+                   <span class="spotify-song-title">${track.name}</span>
+                   <span class="spotify-song-artist">${artistName}</span>
+                </div>
+             `;
+             
+             div.addEventListener('click', () => {
+                 spotifySearchResults.classList.add('hidden');
+                 
+                 // Show the docked player in the editor
+                 if (editorSpotifyPlayer) {
+                   editorSpotifyPlayer.classList.remove('hidden');
+                   editorSpotifyPlayer.innerHTML = `
+                     <iframe 
+                       src="https://open.spotify.com/embed/track/${track.id}?utm_source=generator" 
+                       width="100%" 
+                       height="100%" 
+                       frameBorder="0" 
+                       allowfullscreen="" 
+                       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                       loading="lazy">
+                     </iframe>
+                   `;
+                 }
+              });
+             
+             spotifySearchResults.appendChild(div);
+          });
+       }
+       
+       spotifySearchResults.classList.remove('hidden');
+
+     } catch (err) {
+       console.error('Search error', err);
+       if (err.statusCode === 401) {
+          // Attempt refresh and retry once ideally, but for now just clear
+          logoutSpotify();
+          alert("Session expired. Please log in again.");
+       } else {
+          alert('Failed to search tracks.');
+       }
+     }
+  });
+
+  }
 // Initial Load
 if (activeFilePath && fs.existsSync(activeFilePath)) {
   loadNote(activeFilePath);
 } else {
   renderFileList();
+}
+
+// Initial Spotify UI check
+updateSpotifyPluginUI();
+// Spotify stays hidden on start unless enabled by user in Plugins menu
+if (spotifyWidget) {
+  spotifyWidget.classList.add('hidden');
 }
