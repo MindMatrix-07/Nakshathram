@@ -4,14 +4,53 @@
   "description": "Nakshathram - A beautiful Manglish to Malayalam rich text editor.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win"
   },
-  "author": "",
+  "author": "Nakshathram",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^28.2.0"
+    "electron": "^28.2.0",
+    "electron-builder": "^24.13.3"
   },
   "dependencies": {
     "spotify-web-api-node": "^5.0.2"
+  },
+  "build": {
+    "appId": "com.nakshathram.editor",
+    "productName": "Nakshathram",
+    "asar": false,
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!**/*.md",
+      "!plugins/*.star",
+      "!*.diff",
+      "!.git/**",
+      "!commit.diff",
+      "!reverse.diff",
+      "!reverse_utf8.diff"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nakshathram"
+    }
   }
 }

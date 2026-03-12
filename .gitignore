@@ -3,3 +3,4 @@ notes/*.txt
 .DS_Store
 *.log
 plugins/*.star
+dist/
