@@ -1,13 +1,13 @@
 {
   "name": "nakshathram",
-  "version": "1.0.0",
-  "description": "Nakshathram - A beautiful Manglish to Malayalam rich text editor.",
+  "version": "1.0.1",
+  "description": "Nakshathram - A premium English to all Indian languages transliteration tool.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win"
   },
-  "author": "Nakshathram",
+  "author": "MindMatrix",
   "license": "ISC",
   "devDependencies": {
     "electron": "^28.2.0",

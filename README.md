@@ -5,11 +5,11 @@
 <h1 align="center">Nakshathram</h1>
 
 <p align="center">
-  <strong>A premium, modern Manglish-to-Malayalam rich text editor built for the next generation of Malayali writers.</strong>
+  <strong>A premium, modern English to all Indian languages transliteration tool and rich text editor.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0.1-blue.svg?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/platform-Windows-blueviolet.svg?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/license-ISC-green.svg?style=flat-square" alt="License">
 </p>
@@ -21,8 +21,11 @@
 ### 💎 Premium Design
 Experience a sleek, distraction-free writing environment. **Nakshathram** features a modern dark-themed interface with glassmorphism elements, custom titlebars, and smooth micro-animations.
 
-### ✍️ Intelligent Transliteration
-Type in Manglish and watch it transform into perfect Malayalam script instantly. Supported by the Varnam engine and intelligent auto-suggestions, it makes Malayalam typing feel natural and fast.
+### ✍️ Intelligent Multi-Language Transliteration
+Type in English and watch it transform into any Indian script instantly.
+- **Support for**: Malayalam, Hindi, Bengali, Tamil, Telugu, Kannada, Gujarati, Marathi, Punjabi, Sanskrit, and more.
+- **Powered by Intelligence**: Smart auto-suggestions and predictive text for every supported language.
+- **Fast Switching**: Toggle between languages instantly from the floating status bar.
 
 ### 🧩 Modular Plugin System (`.star`)
 The world's first (?) Manglish editor with an extensible plugin architecture. 
