@@ -2323,14 +2323,12 @@ async function syncToGDrive() {
   }
 }
 
-// Hook into auto-save
-const originalAutoSave = typeof autoSave === 'function' ? autoSave : null;
-if (originalAutoSave) {
-  autoSave = function() {
-    originalAutoSave();
-    if (gdriveAccessToken) syncToGDrive();
-  };
-}
+// 3-Second Interval Sync
+setInterval(() => {
+  if (gdriveAccessToken && activeFilePath) {
+    syncToGDrive();
+  }
+}, 3000);
 
 // Initial UI Check
 updateGDrivePluginUI();
