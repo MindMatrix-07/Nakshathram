@@ -2068,7 +2068,7 @@ if (btnSpotifySearch) {
 // -------- Google Drive Integration Logic --------
 
 // [USER ACTION REQUIRED] Set this to your deployed Vercel API URL
-const VERCEL_CONFIG_URL = 'https://your-app.vercel.app/api/gdrive-config';
+const VERCEL_CONFIG_URL = 'https://nakshathram.vercel.app/api/gdrive-config';
 
 let GDRIVE_CLIENT_ID = null;
 let GDRIVE_CLIENT_SECRET = null;
