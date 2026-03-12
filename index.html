@@ -50,8 +50,8 @@
 
       <div class="dropdown-wrapper">
         <button class="new-file-btn" id="btn-new-file-main">
-          <span class="material-symbols-outlined">add_box</span>
-          New File
+          <span class="material-symbols-outlined">folder</span>
+          Files
         </button>
         <div class="dropdown-menu hidden" id="new-file-menu">
           <div class="dropdown-item" id="btn-create-new">
@@ -61,6 +61,14 @@
           <div class="dropdown-item" id="btn-select-file">
             <span class="material-symbols-outlined">file_open</span>
             Select from files
+          </div>
+          <div class="dropdown-item" id="btn-save-txt">
+            <span class="material-symbols-outlined">save</span>
+            Save file
+          </div>
+          <div class="dropdown-item" id="btn-share-txt">
+            <span class="material-symbols-outlined">share</span>
+            Share file
           </div>
         </div>
       </div>
@@ -411,6 +419,51 @@
       </div>
     </div>
   </div>
+
+  <!-- Share Modal -->
+  <div class="modal hidden" id="share-modal">
+    <div class="modal-content share-modal-content">
+      <div class="share-header">
+        <h3 class="modal-title">
+          <span class="material-symbols-outlined">ios_share</span>
+          Share Note
+        </h3>
+        <button class="close-modal" id="btn-close-share"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      
+      <div class="share-preview">
+        <div class="share-icon"><span class="material-symbols-outlined">description</span></div>
+        <div class="share-info">
+          <div class="share-title" id="share-file-name">Note</div>
+          <div class="share-desc">Text Document</div>
+        </div>
+      </div>
+
+      <div class="share-section-title">Share using</div>
+      <div class="share-options-grid">
+        <div class="share-option" id="share-copy">
+          <div class="share-option-icon copy-icon"><span class="material-symbols-outlined">content_copy</span></div>
+          <span>Copy Text</span>
+        </div>
+        <div class="share-option" id="share-whatsapp">
+          <div class="share-option-icon img-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/WhatsApp_icon.png" alt="WhatsApp"></div>
+          <span>WhatsApp</span>
+        </div>
+        <div class="share-option" id="share-email">
+          <div class="share-option-icon email-icon"><span class="material-symbols-outlined">mail</span></div>
+          <span>Email</span>
+        </div>
+        <div class="share-option" id="share-telegram">
+          <div class="share-option-icon img-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram"></div>
+          <span>Telegram</span>
+        </div>
+        <div class="share-option" id="share-twitter">
+          <div class="share-option-icon twitter-icon"><span>𝕏</span></div>
+          <span>X (Twitter)</span>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Debug Log Box -->
   <div id="debug-log-box" class="debug-log-box hidden">
     <div class="debug-log-header">
@@ -440,7 +493,43 @@
               <p>Search and play music while you write.</p>
             </div>
           </div>
+          <div class="plugin-card" id="card-gdrive">
+            <div class="card-icon gdrive-icon">
+              <span class="material-symbols-outlined">cloud_sync</span>
+            </div>
+            <div class="card-info">
+              <h4>Google Drive</h4>
+              <p>Sync your notes live to your cloud storage.</p>
+            </div>
+          </div>
           <!-- More plugins can be added here -->
+        </div>
+      </div>
+
+      <!-- Hidden Google Drive Sidebar UI -->
+      <div id="gdrive-sidebar-widget" class="sidebar-gdrive-widget hidden">
+        <div class="plugin-section">
+          <div class="plugin-header">
+            <h4>Google Drive</h4>
+            <span class="plugin-badge" id="gdrive-sync-status">Offline</span>
+          </div>
+          
+          <div id="gdrive-setup-phase" class="plugin-phase">
+            <p class="plugin-desc">Connect your account to enable live sync.</p>
+            <button class="sidebar-gdrive-btn" id="btn-gdrive-login">
+              <span class="material-symbols-outlined">login</span>
+              Sign in with Google
+            </button>
+          </div>
+
+          <div id="gdrive-active-phase" class="plugin-phase hidden">
+            <p class="plugin-desc">Live sync is active.</p>
+            <div class="sync-info">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span id="gdrive-user-email">Account Connected</span>
+            </div>
+            <button class="sidebar-link-btn" id="btn-gdrive-logout">Logout</button>
+          </div>
         </div>
       </div>
 

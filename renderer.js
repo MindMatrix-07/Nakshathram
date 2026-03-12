@@ -947,16 +947,7 @@ if (!fs.existsSync(NOTES_DIR)) {
 
 let activeFilePath = localStorage.getItem('last_active_file') || null;
 
-if (btnNewFileMain && newFileMenu) {
-  btnNewFileMain.addEventListener('click', (e) => {
-    e.stopPropagation();
-    newFileMenu.classList.toggle('hidden');
-  });
 
-  document.addEventListener('click', () => {
-    newFileMenu.classList.add('hidden');
-  });
-}
 
 function formatDate(date) {
   const d = new Date(date);
@@ -1205,6 +1196,106 @@ if (btnSelectFile) {
   btnSelectFile.addEventListener('click', () => {
     newFileMenu.classList.add('hidden');
     selectFile();
+  });
+}
+
+if (btnSaveTxt) {
+  btnSaveTxt.addEventListener('click', async () => {
+    newFileMenu.classList.add('hidden');
+    const content = editor.innerText || editor.textContent;
+    const defaultName = activeFilePath ? path.basename(activeFilePath) : 'Untitled.txt';
+    
+    try {
+      const savePath = await ipcRenderer.invoke('save-file-dialog', defaultName);
+      if (savePath) {
+        fs.writeFileSync(savePath, content);
+        logToBox('File saved to: ' + savePath);
+        // We use alert so user knows it worked
+        alert('File saved successfully!');
+      }
+    } catch (e) {
+      console.error('Save error:', e);
+      alert('Could not save file as.');
+    }
+  });
+}
+
+// Share Modal Logic
+const shareModal = document.getElementById('share-modal');
+const btnCloseShare = document.getElementById('btn-close-share');
+const shareFileName = document.getElementById('share-file-name');
+
+const shareCopy = document.getElementById('share-copy');
+const shareWhatsapp = document.getElementById('share-whatsapp');
+const shareEmail = document.getElementById('share-email');
+const shareTelegram = document.getElementById('share-telegram');
+const shareTwitter = document.getElementById('share-twitter');
+
+function closeShareModal() {
+  if (shareModal) shareModal.classList.add('hidden');
+}
+
+if (btnCloseShare) {
+  btnCloseShare.addEventListener('click', closeShareModal);
+}
+
+if (shareModal) {
+  shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) closeShareModal();
+  });
+}
+
+if (btnShareTxt) {
+  btnShareTxt.addEventListener('click', () => {
+    newFileMenu.classList.add('hidden');
+    const title = activeFilePath ? path.basename(activeFilePath) : 'Untitled Note';
+    if (shareFileName) shareFileName.textContent = title;
+    if (shareModal) shareModal.classList.remove('hidden');
+  });
+}
+
+function getShareContent() {
+  return editor.innerText || editor.textContent;
+}
+
+if (shareCopy) {
+  shareCopy.addEventListener('click', () => {
+    require('electron').clipboard.writeText(getShareContent());
+    alert('Text copied to clipboard!');
+    closeShareModal();
+  });
+}
+
+if (shareWhatsapp) {
+  shareWhatsapp.addEventListener('click', () => {
+    const text = encodeURIComponent(getShareContent());
+    require('electron').shell.openExternal(`https://wa.me/?text=${text}`);
+    closeShareModal();
+  });
+}
+
+if (shareEmail) {
+  shareEmail.addEventListener('click', () => {
+    const subject = encodeURIComponent(activeFilePath ? path.basename(activeFilePath, '.txt') : 'Nakshathram Note');
+    const body = encodeURIComponent(getShareContent());
+    require('electron').shell.openExternal(`mailto:?subject=${subject}&body=${body}`);
+    closeShareModal();
+  });
+}
+
+if (shareTelegram) {
+  shareTelegram.addEventListener('click', () => {
+    const text = encodeURIComponent(getShareContent());
+    require('electron').shell.openExternal(`https://t.me/share/url?url=&text=${text}`);
+    closeShareModal();
+  });
+}
+
+if (shareTwitter) {
+  shareTwitter.addEventListener('click', () => {
+    const text = encodeURIComponent(getShareContent());
+    require('electron').shell.openExternal(`https://twitter.com/intent/tweet?text=${text}`);
+    closeShareModal();
   });
 }
 
@@ -1675,6 +1766,8 @@ let spotifyRefreshToken = localStorage.getItem('spotify_refresh_token');
 let spotifyClientId = localStorage.getItem('spotify_client_id');
 
 function updateSpotifyPluginUI() {
+  if (!spotifySetupPhase || !spotifyLoginPhase || !spotifyPlayerPhase) return;
+
   if (!spotifyClientId) {
     // Phase 1: Setup
     spotifySetupPhase.classList.remove('hidden');
@@ -1971,6 +2064,233 @@ if (btnSpotifySearch) {
   });
 
   }
+
+// -------- Google Drive Integration Logic --------
+
+// [USER ACTION REQUIRED] Set this to your deployed Vercel API URL
+const VERCEL_CONFIG_URL = 'https://your-app.vercel.app/api/gdrive-config';
+
+let GDRIVE_CLIENT_ID = null;
+let GDRIVE_CLIENT_SECRET = null;
+let GDRIVE_REDIRECT_URI = 'http://localhost';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+
+let gdriveAccessToken = null;
+let gdriveRefreshToken = localStorage.getItem('gdrive_refresh_token');
+
+// ELEMENTS
+const cardGDrive = document.getElementById('card-gdrive');
+const gdriveWidget = document.getElementById('gdrive-sidebar-widget');
+const btnGDriveLogin = document.getElementById('btn-gdrive-login');
+const btnGDriveLogout = document.getElementById('btn-gdrive-logout');
+const gdriveSetupPhase = document.getElementById('gdrive-setup-phase');
+const gdriveActivePhase = document.getElementById('gdrive-active-phase');
+const gdriveSyncStatus = document.getElementById('gdrive-sync-status');
+const gdriveUserEmail = document.getElementById('gdrive-user-email');
+
+async function fetchGDriveConfig() {
+  if (GDRIVE_CLIENT_ID && GDRIVE_CLIENT_SECRET) return true;
+  
+  try {
+    const response = await fetch(VERCEL_CONFIG_URL);
+    if (!response.ok) throw new Error('Failed to fetch config from Vercel');
+    const data = await response.json();
+    GDRIVE_CLIENT_ID = data.clientId;
+    GDRIVE_CLIENT_SECRET = data.clientSecret;
+    GDRIVE_REDIRECT_URI = data.redirectUri || 'http://localhost';
+    
+    if (!GDRIVE_CLIENT_ID || !GDRIVE_CLIENT_SECRET) {
+      console.error('Vercel returned empty GDrive credentials. Check your Environment Variables.');
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error fetching Google Drive config:', err);
+    return false;
+  }
+}
+
+function updateGDrivePluginUI() {
+  if (!gdriveWidget) return;
+
+  if (!gdriveAccessToken && !gdriveRefreshToken) {
+    gdriveSetupPhase.classList.remove('hidden');
+    gdriveActivePhase.classList.add('hidden');
+    gdriveSyncStatus.textContent = 'Offline';
+    gdriveSyncStatus.style.background = 'rgba(255, 255, 255, 0.1)';
+  } else {
+    gdriveSetupPhase.classList.add('hidden');
+    gdriveActivePhase.classList.remove('hidden');
+    gdriveSyncStatus.textContent = 'Active';
+    gdriveSyncStatus.style.background = 'rgba(66, 133, 244, 0.2)';
+    
+    // Eagerly refresh token if we only have the refresh token
+    if (!gdriveAccessToken && gdriveRefreshToken) {
+      refreshGDriveToken();
+    }
+  }
+}
+
+async function refreshGDriveToken() {
+  if (!gdriveRefreshToken) return;
+  
+  const configLoaded = await fetchGDriveConfig();
+  if (!configLoaded) return;
+  
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: GDRIVE_CLIENT_ID,
+        client_secret: GDRIVE_CLIENT_SECRET,
+        refresh_token: gdriveRefreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!response.ok) throw new Error('Refresh failed');
+    const data = await response.json();
+    gdriveAccessToken = data.access_token;
+    console.log('Google Drive Token Refreshed');
+  } catch (err) {
+    console.error('Google token refresh error:', err);
+    logoutGDrive();
+  }
+}
+
+async function logoutGDrive() {
+  gdriveAccessToken = null;
+  gdriveRefreshToken = null;
+  localStorage.removeItem('gdrive_refresh_token');
+  await ipcRenderer.invoke('google-logout');
+  updateGDrivePluginUI();
+}
+
+if (cardGDrive) {
+  cardGDrive.addEventListener('click', () => {
+    if (pluginsModal) pluginsModal.classList.add('hidden');
+    if (gdriveWidget) gdriveWidget.classList.remove('hidden');
+    updateGDrivePluginUI();
+  });
+}
+
+if (btnGDriveLogin) {
+  btnGDriveLogin.addEventListener('click', async () => {
+    btnGDriveLogin.disabled = true;
+    btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">sync</span> Loading...';
+
+    const configLoaded = await fetchGDriveConfig();
+    if (!configLoaded) {
+      alert('Could not reach Vercel API. Make sure VERCEL_CONFIG_URL is correct in renderer.js');
+      btnGDriveLogin.disabled = false;
+      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Sign in with Google';
+      return;
+    }
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GDRIVE_CLIENT_ID}&redirect_uri=${GDRIVE_REDIRECT_URI}&response_type=code&scope=${encodeURIComponent(GDRIVE_SCOPE)}&access_type=offline&prompt=consent`;
+    
+    try {
+      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">sync</span> Waiting...';
+      
+      const code = await ipcRenderer.invoke('google-login', authUrl);
+      
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code,
+          client_id: GDRIVE_CLIENT_ID,
+          client_secret: GDRIVE_CLIENT_SECRET,
+          redirect_uri: GDRIVE_REDIRECT_URI,
+          grant_type: 'authorization_code'
+        })
+      });
+
+      if (!response.ok) throw new Error('Token exchange failed');
+      const data = await response.json();
+      
+      gdriveAccessToken = data.access_token;
+      gdriveRefreshToken = data.refresh_token;
+      if (gdriveRefreshToken) localStorage.setItem('gdrive_refresh_token', gdriveRefreshToken);
+      
+      updateGDrivePluginUI();
+    } catch (err) {
+      console.error('Google Login Error:', err);
+      alert('Login failed. Check console for details.');
+    } finally {
+      btnGDriveLogin.disabled = false;
+      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Sign in with Google';
+    }
+  });
+}
+
+if (btnGDriveLogout) {
+  btnGDriveLogout.addEventListener('click', logoutGDrive);
+}
+
+// LIVE SYNC LOGIC
+async function syncToGDrive() {
+  if (!gdriveAccessToken || !activeFilePath) return;
+
+  const fileName = path.basename(activeFilePath);
+  const content = editor.innerText || editor.textContent;
+
+  try {
+    // 1. Check if file already exists in Drive (simple search by name)
+    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and trashed=false`, {
+      headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+    });
+    const searchData = await searchResponse.json();
+    const existingFile = searchData.files && searchData.files[0];
+
+    if (existingFile) {
+      // Update existing file
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${gdriveAccessToken}`,
+          'Content-Type': 'text/plain'
+        },
+        body: content
+      });
+      console.log(`Synced update for ${fileName} to Google Drive`);
+    } else {
+      // Create new file
+      const metadata = {
+        name: fileName,
+        mimeType: 'text/plain'
+      };
+      
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', new Blob([content], { type: 'text/plain' }));
+
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${gdriveAccessToken}` },
+        body: form
+      });
+      console.log(`Synced new file ${fileName} to Google Drive`);
+    }
+  } catch (err) {
+    console.error('Sync to Google Drive failed:', err);
+    // If 401, refresh token and retry once?
+  }
+}
+
+// Hook into auto-save
+const originalAutoSave = typeof autoSave === 'function' ? autoSave : null;
+if (originalAutoSave) {
+  autoSave = function() {
+    originalAutoSave();
+    if (gdriveAccessToken) syncToGDrive();
+  };
+}
+
+// Initial UI Check
+updateGDrivePluginUI();
+
 // Initial Load
 if (activeFilePath && fs.existsSync(activeFilePath)) {
   loadNote(activeFilePath);

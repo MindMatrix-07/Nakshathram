@@ -1,0 +1,3773 @@
+﻿commit baa6965f0545b10b15777a6ad1ef3819132abdf6
+Author: MindMatrix-07 <your-email@example.com>
+Date:   Wed Mar 11 15:36:20 2026 +0530
+
+    Initial commit: Nakshathram Electron App source code
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..19a6f58
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,4 @@
++node_modules/
++notes/*.txt
++.DS_Store
++*.log
+diff --git a/assets/google-ml.png b/assets/google-ml.png
+new file mode 100644
+index 0000000..47336e8
+Binary files /dev/null and b/assets/google-ml.png differ
+diff --git a/assets/varnam.png b/assets/varnam.png
+new file mode 100644
+index 0000000..38cee52
+Binary files /dev/null and b/assets/varnam.png differ
+diff --git a/index.css b/index.css
+new file mode 100644
+index 0000000..c834466
+--- /dev/null
++++ b/index.css
+@@ -0,0 +1,1130 @@
++:root {
++  --sidebar-bg: #151821;
++  --main-bg: #0d1117;
++  --editor-bg: #161b22;
++  --text-primary: #e6edf3;
++  --text-secondary: #7d8590;
++  --accent-color: #58a6ff;
++  --hover-bg: rgba(177, 186, 196, 0.12);
++  --active-bg: #21262d;
++  --border-color: #30363d;
++  --font-family: 'Inter', 'Noto Sans Malayalam', sans-serif;
++  --shadow-elevation: 0 8px 24px rgba(0, 0, 0, 0.4);
++  --glass-bg: rgba(22, 27, 34, 0.7);
++  --glass-border: rgba(255, 255, 255, 0.08);
++}
++
++* {
++  margin: 0;
++  padding: 0;
++  box-sizing: border-box;
++}
++
++body {
++  font-family: var(--font-family);
++  background-color: var(--main-bg);
++  color: var(--text-primary);
++  height: 100vh;
++}
++
++.app-container {
++  display: flex;
++  height: 100%;
++  width: 100%;
++  position: relative;
++}
++
++/* Sidebar */
++.sidebar {
++  width: 260px;
++  background-color: var(--sidebar-bg);
++  border-right: 1px solid var(--border-color);
++  display: flex;
++  flex-direction: column;
++  padding: 20px 16px;
++  flex-shrink: 0;
++}
++
++.sidebar-header {
++  margin-bottom: 30px;
++  padding: 0 8px;
++}
++
++.logo-text {
++  font-size: 1.2rem;
++  font-weight: 700;
++  letter-spacing: -0.5px;
++  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
++  -webkit-background-clip: text;
++  background-clip: text;
++  -webkit-text-fill-color: transparent;
++}
++
++.made-using {
++  margin-top: 8px;
++  padding: 0 4px;
++}
++
++.made-using-text {
++  font-size: 0.65rem;
++  color: var(--text-secondary);
++  text-transform: uppercase;
++  letter-spacing: 1px;
++  display: block;
++  margin-bottom: 8px;
++  opacity: 0.6;
++}
++
++.using-logos {
++  display: flex;
++  gap: 12px;
++  align-items: center;
++}
++
++.using-item {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  background: rgba(255, 255, 255, 0.08); 
++  width: 64px;
++  height: 32px;
++  border-radius: 6px;
++  border: 1px solid rgba(255, 255, 255, 0.1);
++  overflow: hidden;
++  transition: all 0.2s ease;
++  cursor: pointer;
++}
++
++#logo-google {
++  background: white !important; /* Force white only for Google */
++}
++
++#logo-google img {
++  width: 100%;
++  height: 100%;
++  object-fit: contain !important; /* Reverted to contain as requested */
++  filter: none;
++}
++
++
++.using-item:hover {
++  background: rgba(255, 255, 255, 0.06);
++  border-color: rgba(255, 255, 255, 0.1);
++}
++
++.using-item img {
++  width: 100%;
++  height: 100%;
++  object-fit: cover; /* Fills the entire rectangle */
++  transition: transform 0.2s ease;
++}
++
++.using-item:hover img {
++  transform: scale(1.1);
++}
++
++.using-item span {
++  font-size: 0.7rem;
++  color: var(--text-secondary);
++  font-weight: 500;
++}
++
++.new-file-btn {
++  width: 100%;
++  background-color: transparent;
++  color: var(--text-primary);
++  border: 1px solid var(--border-color);
++  padding: 12px 16px;
++  border-radius: 8px;
++  display: flex;
++  align-items: center;
++  gap: 12px;
++  font-weight: 500;
++  font-size: 0.95rem;
++  cursor: pointer;
++  transition: all 0.2s;
++  margin-bottom: 24px;
++}
++
++.sidebar-content .dropdown-wrapper {
++  width: 100%;
++}
++
++.new-file-btn:hover {
++  background-color: var(--hover-bg);
++}
++
++.file-list-section {
++  flex: 1;
++  margin-top: 24px;
++}
++
++.section-title {
++  font-size: 0.7rem;
++  color: var(--text-secondary);
++  text-transform: uppercase;
++  letter-spacing: 1px;
++  margin-bottom: 8px;
++  padding: 0 8px;
++}
++
++.file-list {
++  list-style: none;
++}
++
++.file-item {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 10px 12px;
++  margin-bottom: 2px;
++  border-radius: 8px;
++  cursor: pointer;
++  transition: all 0.2s;
++  color: var(--text-secondary);
++  font-size: 0.9rem;
++  position: relative;
++}
++
++.file-item:hover {
++  background-color: var(--hover-bg);
++}
++
++.file-item.active {
++  background-color: #37393e;
++  color: var(--text-primary);
++}
++
++.file-item .file-name {
++  flex: 1;
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  pointer-events: none; /* Let the click pass to the LI */
++}
++
++.rename-icon {
++  font-size: 1.1rem !important;
++  color: var(--text-secondary);
++  opacity: 0.5;
++  transition: all 0.2s;
++  margin-left: 8px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 4px;
++  border-radius: 4px;
++}
++
++.file-item.active .rename-icon {
++  opacity: 0.8;
++}
++
++.rename-icon:hover {
++  opacity: 1 !important;
++  background-color: rgba(255, 255, 255, 0.1);
++  color: var(--accent-color) !important;
++}
++
++.sidebar-footer {
++  margin-top: auto;
++  padding-top: 16px;
++  text-align: center;
++}
++
++.storage-notice {
++  font-size: 0.75rem;
++  color: var(--text-secondary);
++  margin-bottom: 16px;
++  line-height: 1.4;
++}
++
++.feedback-btn {
++  background: none;
++  border: none;
++  color: var(--text-primary);
++  font-size: 0.9rem;
++  cursor: pointer;
++  padding: 8px 16px;
++  border-radius: 16px;
++  transition: background 0.2s;
++}
++
++.feedback-btn:hover {
++  background-color: var(--hover-bg);
++}
++
++/* Main Content */
++.main-content {
++  flex: 1;
++  display: flex;
++  flex-direction: column;
++  background-color: var(--main-bg);
++  position: relative;
++}
++
++/* Toolbar */
++.toolbar {
++  height: 64px;
++  display: flex;
++  align-items: center;
++  border-bottom: 1px solid var(--border-color);
++  background: var(--main-bg);
++  position: relative;
++  -webkit-app-region: drag;
++  padding: 0 40px; /* Matches editor-wrapper horizontal padding */
++}
++
++.toolbar-center {
++  flex: 1;
++  display: flex;
++  justify-content: center;
++}
++
++.toolbar-items {
++  width: 100%;
++  max-width: 900px; /* Matches #editor max-width */
++  display: flex;
++  gap: 32px;
++  padding: 0 40px; /* Matches #editor internal padding */
++  overflow: visible;
++}
++
++.tool-group {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  background: var(--active-bg);
++  padding: 4px;
++  border-radius: 12px;
++  border: 1px solid rgba(255,255,255,0.03);
++}
++
++.separator {
++  width: 1px;
++  height: 24px;
++  background-color: transparent; /* No longer needed as we grouped UI in padded blocks */
++  margin: 0;
++}
++
++.dropdown-wrapper {
++  position: relative;
++  display: flex;
++  align-items: center;
++}
++
++.dropdown-menu {
++  position: absolute;
++  top: 100%;
++  right: 0;
++  margin-top: 10px;
++  background-color: var(--editor-bg);
++  border: 1px solid var(--border-color);
++  border-radius: 8px;
++  padding: 12px;
++  min-width: 200px;
++  box-shadow: var(--shadow-elevation);
++  z-index: 2000;
++  display: flex;
++  flex-direction: column;
++  gap: 8px;
++}
++
++.dropdown-menu.hidden {
++  display: none !important;
++}
++
++.dropdown-wrapper.up .dropdown-menu {
++  top: auto;
++  bottom: 100%;
++  margin-top: 0;
++  margin-bottom: 12px;
++  right: 0;
++  max-height: 400px;
++  overflow-y: auto;
++}
++
++.sidebar-content .dropdown-menu {
++  left: 0;
++  right: auto;
++  margin-top: 4px;
++  min-width: 100%;
++}
++
++.dropdown-item-lang {
++  padding: 10px 16px;
++  cursor: pointer;
++  font-size: 0.95rem;
++  color: var(--text-primary);
++  border-radius: 6px;
++  transition: all 0.2s;
++  white-space: nowrap;
++}
++
++.dropdown-item-lang:hover {
++  background-color: var(--hover-bg);
++  color: var(--accent-color);
++}
++
++.dropdown-item-lang.active {
++  background-color: var(--active-bg);
++  color: var(--accent-color);
++  font-weight: bold;
++}
++
++.dropdown-item {
++  display: flex;
++  align-items: center;
++  gap: 12px;
++  cursor: pointer;
++  padding: 8px;
++  border-radius: 6px;
++  transition: background 0.2s;
++}
++
++.dropdown-item:hover {
++  background-color: var(--hover-bg);
++}
++
++.dropdown-item input {
++  width: 16px;
++  height: 16px;
++  cursor: pointer;
++}
++.tool-btn {
++  background: transparent;
++  border: none;
++  color: var(--text-primary);
++  width: 36px;
++  height: 36px;
++  border-radius: 8px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  cursor: pointer;
++  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
++  font-family: inherit;
++  font-size: 1rem;
++}
++
++.tool-btn:hover {
++  background-color: var(--hover-bg);
++  color: var(--accent-color);
++  transform: translateY(-1px);
++}
++
++.tool-btn:active {
++  transform: translateY(1px);
++}
++
++.correct-trigger {
++  width: auto !important;
++  padding: 0 16px;
++  background: var(--accent-color) !important;
++  color: #000 !important;
++  font-weight: 600;
++  font-size: 0.85rem;
++  border-radius: 20px;
++  margin-right: 12px;
++  box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
++  animation: slideIn 0.3s ease-out;
++}
++
++.correct-trigger:hover {
++  background: #79b6ff !important;
++  box-shadow: 0 6px 16px rgba(88, 166, 255, 0.4);
++}
++
++@keyframes slideIn {
++  from { opacity: 0; transform: translateX(20px); }
++  to { opacity: 1; transform: translateX(0); }
++}
++
++.tool-btn .material-symbols-outlined {
++  font-size: 1.2rem;
++}
++
++.font-weight-bold { font-weight: bold; }
++.font-style-italic { font-style: italic; }
++.text-decoration-underline { text-decoration: underline; }
++
++.font-select-group .font-select {
++  background: transparent;
++  border: none;
++  color: var(--text-primary);
++  font-family: inherit;
++  font-size: 0.9rem;
++  cursor: pointer;
++  outline: none;
++  padding: 4px 8px;
++}
++
++.font-size-group {
++  gap: 8px;
++  padding: 4px 12px;
++}
++
++.font-size-group .sz-btn {
++  width: 24px;
++  height: 24px;
++  border-radius: 4px;
++  border: 1px solid var(--border-color);
++  font-weight: bold;
++}
++
++.font-size {
++  font-size: 0.9rem;
++}
++
++/* Editor Wrapper */
++.editor-wrapper {
++  flex: 1;
++  padding: 20px 40px;
++  overflow-y: auto;
++  display: flex;
++  justify-content: center;
++}
++
++#editor {
++  width: 100%;
++  max-width: 900px;
++  height: 100%;
++  min-height: 500px;
++  background-color: var(--editor-bg);
++  border-radius: 12px;
++  padding: 40px;
++  font-size: 1.1rem;
++  line-height: 1.7;
++  color: var(--text-primary);
++  outline: none;
++  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
++  overflow-y: auto;
++  white-space: pre-wrap;
++  word-wrap: break-word;
++}
++
++#editor[placeholder]:empty:before {
++  content: attr(placeholder);
++  color: var(--text-secondary);
++}
++
++/* Floating Bottom Bar (Glassmorphism) */
++.floating-bar {
++  position: absolute;
++  bottom: 32px;
++  left: 50%;
++  transform: translateX(-50%);
++  background-color: var(--glass-bg);
++  backdrop-filter: blur(12px);
++  -webkit-backdrop-filter: blur(12px);
++  border-radius: 30px;
++  padding: 8px 20px;
++  display: flex;
++  align-items: center;
++  gap: 20px;
++  box-shadow: var(--shadow-elevation);
++  border: 1px solid var(--glass-border);
++  transition: all 0.3s ease;
++}
++
++.floating-bar:hover {
++  transform: translateX(-50%) translateY(-2px);
++  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
++}
++
++.lang-toggle {
++  display: flex;
++  background-color: rgba(0,0,0,0.3);
++  border-radius: 20px;
++  overflow: hidden;
++  padding: 4px;
++  border: 1px solid rgba(255,255,255,0.03);
++}
++
++.lang-btn {
++  background: transparent;
++  color: var(--text-secondary);
++  border: none;
++  padding: 8px 20px;
++  font-family: inherit;
++  font-size: 0.9rem;
++  border-radius: 16px;
++  cursor: pointer;
++  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
++}
++
++.lang-btn.active {
++  background-color: var(--accent-color); /* Bright blue accent */
++  color: #000; /* High contrast text on accent */
++  font-weight: 600;
++  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.4);
++}
++
++.float-action-btn {
++  background: transparent;
++  border: none;
++  color: var(--text-secondary);
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  font-size: 0.85rem;
++  cursor: pointer;
++  padding: 6px 8px;
++  border-radius: 8px;
++  transition: color 0.2s, background 0.2s;
++}
++
++.float-action-btn:hover {
++  color: var(--text-primary);
++  background: var(--hover-bg);
++}
++
++.float-action-btn .material-symbols-outlined {
++  font-size: 1.1rem;
++}
++
++.icon-only {
++  padding: 6px;
++  border-radius: 50%;
++}
++
++/* Suggestions Box */
++.suggestions-box {
++  position: absolute;
++  background: var(--editor-bg);
++  border: 1px solid var(--border-color);
++  border-radius: 8px;
++  box-shadow: var(--shadow-elevation);
++  z-index: 1000;
++  min-width: 150px;
++  max-width: 300px;
++  display: flex !important;
++  flex-direction: column;
++  overflow: hidden;
++  transition: opacity 0.2s, transform 0.2s;
++}
++
++.suggestions-box.hidden {
++  display: none !important;
++}
++
++.suggestion-item {
++  padding: 10px 16px;
++  cursor: pointer;
++  color: var(--text-primary);
++  border-bottom: 1px solid var(--border-color);
++  font-size: 1rem;
++  transition: background 0.2s;
++}
++
++.suggestion-item:last-child {
++  border-bottom: none;
++}
++
++.suggestion-item:hover, .suggestion-item.selected {
++  background-color: var(--hover-bg);
++  color: var(--accent-color);
++}
++
++/* Modals */
++.modal-overlay {
++  position: absolute;
++  top: 0; left: 0; right: 0; bottom: 0;
++  background: rgba(0,0,0,0.6);
++  backdrop-filter: blur(4px);
++  -webkit-backdrop-filter: blur(4px);
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  z-index: 9999;
++}
++
++.modal-overlay.hidden {
++  display: none;
++}
++
++.modal-content {
++  background: var(--main-bg);
++  border-radius: 12px;
++  width: 90%;
++  max-width: 800px;
++  box-shadow: var(--shadow-elevation);
++  display: flex;
++  flex-direction: column;
++  overflow: hidden;
++  border: 1px solid var(--border-color);
++}
++
++.modal-header {
++  padding: 16px 24px;
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  border-bottom: 2px solid var(--accent-color); /* To signify active active state like in screenshot */
++}
++
++.modal-header h3 {
++  font-size: 0.9rem;
++  letter-spacing: 1px;
++  color: var(--accent-color);
++  margin: 0;
++}
++
++.close-modal {
++  background: none;
++  border: none;
++  color: var(--text-secondary);
++  cursor: pointer;
++}
++
++.close-modal:hover {
++  color: var(--text-primary);
++}
++
++.modal-body {
++  padding: 24px;
++}
++
++.add-word-form {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 32px;
++}
++
++.word-input {
++  flex: 1;
++  background: transparent;
++  border: 1px solid var(--border-color);
++  padding: 12px 16px;
++  border-radius: 4px;
++  color: var(--text-primary);
++  font-family: inherit;
++  font-size: 1rem;
++}
++
++.word-input:focus {
++  outline: none;
++  border-color: var(--accent-color);
++}
++
++.btn-primary {
++  background-color: #556ee6; /* Distinct blue like the screenshot */
++  color: white;
++  border: none;
++  padding: 0 24px;
++  border-radius: 4px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  font-weight: 600;
++  cursor: pointer;
++  transition: background 0.2s;
++}
++
++.btn-primary:hover {
++  background-color: #4459b3;
++}
++
++.word-table-wrapper {
++  overflow-x: auto;
++}
++
++.word-table {
++  width: 100%;
++  border-collapse: collapse;
++}
++
++.word-table th {
++  text-align: left;
++  padding: 12px;
++  color: var(--text-secondary);
++  font-size: 0.8rem;
++  font-weight: 600;
++  text-transform: uppercase;
++  border-bottom: 1px solid var(--border-color);
++}
++
++.word-table td {
++  padding: 16px 12px;
++  font-size: 0.9rem;
++  color: var(--text-secondary);
++  border-bottom: 1px solid var(--active-bg);
++}
++
++.empty-data {
++  text-align: center !important;
++  color: var(--text-secondary);
++  padding: 32px !important;
++}
++
++.ai-stats-summary {
++  background: var(--active-bg);
++  padding: 16px;
++  border-radius: 8px;
++  border: 1px solid var(--border-color);
++  color: var(--text-secondary);
++  font-size: 0.9rem;
++  line-height: 1.5;
++}
++
++#btn-ai-dashboard .material-symbols-outlined {
++  color: #f7d794; /* Golden glow for AI wisdom icon */
++}
++
++.hidden {
++  display: none !important;
++}
++
++.window-controls {
++  margin-left: auto;
++  display: flex;
++  align-items: center;
++  gap: 4px;
++  -webkit-app-region: no-drag;
++}
++
++.win-btn {
++  background: transparent;
++  border: none;
++  color: var(--text-secondary);
++  width: 44px;
++  height: 32px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  cursor: pointer;
++  transition: all 0.2s;
++}
++
++.win-btn .material-symbols-outlined {
++  font-size: 1.1rem;
++}
++
++/* Debug Log Box */
++.debug-log-box {
++  position: fixed;
++  bottom: 100px;
++  right: 20px;
++  width: 300px;
++  max-height: 400px;
++  background: rgba(13, 17, 23, 0.9);
++  backdrop-filter: blur(8px);
++  border: 1px solid var(--border-color);
++  border-radius: 12px;
++  display: flex;
++  flex-direction: column;
++  z-index: 10000;
++  box-shadow: var(--shadow-elevation);
++  font-family: 'Consolas', 'Monaco', monospace;
++  font-size: 0.8rem;
++}
++
++.debug-log-header {
++  padding: 8px 12px;
++  background: var(--active-bg);
++  border-bottom: 1px solid var(--border-color);
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  border-radius: 12px 12px 0 0;
++}
++
++.debug-log-header span {
++  font-weight: 600;
++  color: var(--accent-color);
++}
++
++#btn-clear-logs {
++  background: transparent;
++  border: none;
++  color: var(--text-secondary);
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++}
++
++#btn-clear-logs:hover {
++  color: #ff7b72;
++}
++
++#btn-clear-logs .material-symbols-outlined {
++  font-size: 1.1rem;
++}
++
++.debug-log-content {
++  flex: 1;
++  overflow-y: auto;
++  padding: 8px;
++  color: #c9d1d9;
++}
++
++.log-entry {
++  margin-bottom: 4px;
++  word-break: break-all;
++  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
++  padding-bottom: 2px;
++}
++
++.log-time {
++  color: #8b949e;
++  margin-right: 6px;
++}
++
++.log-error {
++  color: #ff7b72;
++}
++
++.log-info {
++  color: #58a6ff;
++}
++
++.win-btn:hover {
++  background-color: var(--hover-bg);
++  color: var(--text-primary);
++}
++
++.win-btn.win-close:hover {
++  background-color: #e81123 !important;
++  color: white !important;
++}
++
++/* Make toolbar draggable but allow buttons to be clickable */
++.toolbar {
++  -webkit-app-region: drag;
++}
++
++.tool-group, .win-btn, .dropdown-wrapper {
++  -webkit-app-region: no-drag;
++}
++
++/* Correction Modal Specifics */
++.correction-modal {
++  max-width: 600px;
++  border: 1px solid var(--accent-color);
++}
++
++.header-titles h3 {
++  margin: 0;
++  color: var(--accent-color);
++  font-size: 1rem;
++}
++
++.sub-heading {
++  font-size: 0.75rem;
++  color: var(--text-secondary);
++  margin-top: 4px;
++}
++
++.correction-display {
++  background: var(--active-bg);
++  padding: 12px 20px;
++  border-radius: 8px;
++  margin-bottom: 20px;
++}
++
++.info-pair {
++  display: flex;
++  align-items: baseline;
++  gap: 12px;
++}
++
++.info-pair .label {
++  font-size: 0.75rem;
++  color: var(--text-secondary);
++  text-transform: uppercase;
++}
++
++.info-pair .val {
++  font-size: 1.2rem;
++  font-weight: 600;
++  color: var(--accent-color);
++  letter-spacing: 1px;
++}
++
++.canvas-container {
++  position: relative;
++  background: #1e1e1e; /* Match editor bg */
++  border-radius: 12px;
++  border: 2px solid var(--border-color);
++  overflow: hidden;
++  margin: 0 auto 24px auto;
++  touch-action: none;
++  max-width: 100%;
++  height: 300px; /* Fixed height for consistency */
++}
++
++#drawing-canvas {
++  position: relative;
++  width: 100%;
++  height: 100%;
++  display: block;
++  z-index: 2;
++  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l5 5"></path></svg>') 0 20, crosshair;
++}
++
++#drawing-canvas.pen-tool {
++  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2358a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>') 0 20, crosshair;
++}
++
++#drawing-canvas.eraser-tool {
++  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ff7b72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l14-14 4 4-7 7"></path><path d="M12 22l4-4"></path></svg>') 0 20, crosshair;
++}
++
++.canvas-hint {
++  position: absolute;
++  top: 12px;
++  right: 12px;
++  font-size: 0.7rem;
++  color: rgba(255, 255, 255, 0.3);
++  pointer-events: none;
++}
++
++.modal-footer-actions {
++  display: flex;
++  justify-content: center; /* Center buttons */
++  gap: 12px;
++  flex-wrap: wrap; /* Handle narrow screens */
++}
++
++.modal-btn {
++  padding: 10px 18px; /* Slightly reduced padding */
++  border-radius: 8px;
++  border: none;
++  font-weight: 600;
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  transition: all 0.2s;
++  white-space: nowrap; /* Prevent text wrapping inside buttons */
++}
++
++.modal-btn.primary {
++  background: var(--accent-color);
++  color: #000;
++}
++
++.modal-btn.secondary {
++  background: var(--active-bg);
++  color: var(--text-primary);
++  border: 1px solid var(--border-color);
++}
++
++.modal-btn:hover {
++  opacity: 0.9;
++  transform: translateY(-1px);
++}
++
++.modal-btn.active-tool {
++  border-color: var(--accent-color);
++  background: rgba(88, 166, 255, 0.1);
++  color: var(--accent-color);
++}
++
++/* Beautiful Modal System */
++.modal {
++  position: fixed;
++  top: 0;
++  left: 0;
++  width: 100vw;
++  height: 100vh;
++  background: rgba(0, 0, 0, 0.4);
++  backdrop-filter: blur(12px); /* Premium glass blur */
++  display: flex !important; /* Force flex for centering */
++  align-items: center;
++  justify-content: center;
++  z-index: 10000;
++  transition: all 0.3s ease;
++}
++
++.modal.hidden {
++  display: none !important;
++  opacity: 0;
++  pointer-events: none;
++}
++
++.modal-content {
++  background: var(--editor-bg);
++  border: 1px solid var(--border-color);
++  border-radius: 20px;
++  padding: 32px;
++  width: 90%;
++  max-width: 440px;
++  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
++  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
++}
++
++@keyframes modalPop {
++  from { opacity: 0; transform: scale(0.9) translateY(20px); }
++  to { opacity: 1; transform: scale(1) translateY(0); }
++}
++
++.modal-title {
++  margin-top: 0;
++  margin-bottom: 24px;
++  font-size: 1.4rem;
++  color: var(--text-primary);
++  font-weight: 600;
++  display: flex;
++  align-items: center;
++  gap: 12px;
++}
++
++.modal-input {
++  width: 100%;
++  padding: 14px 18px;
++  background: var(--active-bg);
++  border: 1px solid var(--border-color);
++  border-radius: 12px;
++  color: var(--text-primary);
++  font-family: inherit;
++  font-size: 1.1rem;
++  margin-bottom: 30px;
++  outline: none;
++  transition: all 0.2s;
++  box-sizing: border-box;
++}
++
++.modal-input:focus {
++  border-color: var(--accent-color);
++  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
++}
++
++.modal-actions {
++  display: flex;
++  justify-content: flex-end;
++  gap: 16px;
++}
++
++.modal-btn {
++  padding: 12px 24px;
++  border-radius: 10px;
++  cursor: pointer;
++  font-weight: 600;
++  font-size: 0.95rem;
++  transition: all 0.2s;
++  border: none;
++  font-family: inherit;
++}
++
++.modal-btn.primary {
++  background: var(--accent-color);
++  color: white;
++  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
++}
++
++.modal-btn.primary:hover {
++  transform: translateY(-2px);
++  box-shadow: 0 6px 16px rgba(100, 108, 255, 0.4);
++}
++
++.modal-btn.secondary {
++  background: transparent;
++  color: var(--text-secondary);
++  border: 1px solid var(--border-color);
++}
++
++.modal-btn.secondary:hover {
++  background: var(--hover-bg);
++  color: var(--text-primary);
++}
+diff --git a/index.html b/index.html
+new file mode 100644
+index 0000000..3556e0a
+--- /dev/null
++++ b/index.html
+@@ -0,0 +1,338 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Nakshathram</title>
++  <link rel="stylesheet" href="index.css">
++  <!-- Google Fonts & Material Symbols for modern UI -->
++  <link rel="preconnect" href="https://fonts.googleapis.com">
++  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
++  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
++  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
++</head>
++<body>
++  <div class="app-container">
++    
++    <!-- Sidebar -->
++    <aside class="sidebar">
++      <div class="sidebar-header">
++        <div class="logo">
++          <span class="logo-text">Nakshathram</span>
++        </div>
++        <div class="made-using">
++          <span class="made-using-text">made using</span>
++          <div class="using-logos">
++            <div class="using-item" id="logo-varnam" title="Varnam Project">
++              <img src="assets/varnam.png" alt="Varnam">
++            </div>
++            <div class="using-item" id="logo-google" title="Google Input Tools ML">
++              <img src="assets/google-ml.png" alt="Google ML">
++            </div>
++          </div>
++        </div>
++      </div>
++
++      <button class="new-file-btn" id="btn-add-word">
++        <span class="material-symbols-outlined">add</span>
++        Add Words
++      </button>
++
++      <button class="new-file-btn" id="btn-ai-dashboard">
++        <span class="material-symbols-outlined">psychology</span>
++        AI Dashboard
++      </button>
++
++      <div class="dropdown-wrapper">
++        <button class="new-file-btn" id="btn-new-file-main">
++          <span class="material-symbols-outlined">add_box</span>
++          New File
++        </button>
++        <div class="dropdown-menu hidden" id="new-file-menu">
++          <div class="dropdown-item" id="btn-create-new">
++            <span class="material-symbols-outlined">description</span>
++            Create New
++          </div>
++          <div class="dropdown-item" id="btn-select-file">
++            <span class="material-symbols-outlined">file_open</span>
++            Select from files
++          </div>
++        </div>
++      </div>
++
++      <div class="file-list-section" id="section-today">
++        <h4 class="section-title">Today</h4>
++        <ul class="file-list" id="file-list-today">
++          <!-- Populated by renderer.js -->
++        </ul>
++      </div>
++
++      <div class="file-list-section" id="section-yesterday">
++        <h4 class="section-title">Yesterday</h4>
++        <ul class="file-list" id="file-list-yesterday">
++        </ul>
++      </div>
++
++      <div class="file-list-section" id="section-earlier">
++        <h4 class="section-title">Earlier</h4>
++        <ul class="file-list" id="file-list-earlier">
++        </ul>
++      </div>
++
++      <div class="sidebar-footer">
++        <p class="storage-notice">Your files are only stored in your pc</p>
++      </div>
++    </aside>
++
++    <!-- Main Editor Area -->
++    <main class="main-content">
++      
++      <!-- Top Toolbar -->
++      <header class="toolbar">
++        <div class="toolbar-center">
++          <div class="toolbar-items">
++            <div class="tool-group">
++              <button class="tool-btn" title="Undo"><span class="material-symbols-outlined">undo</span></button>
++              <button class="tool-btn" title="Redo"><span class="material-symbols-outlined">redo</span></button>
++            </div>
++
++            <div class="tool-group font-size-group">
++              <button class="tool-btn sz-btn" id="btn-fs-dec">-</button>
++              <span class="font-size" id="current-fs">12</span>
++              <button class="tool-btn sz-btn" id="btn-fs-inc">+</button>
++            </div>
++
++            <div class="tool-group text-styles">
++              <button class="tool-btn font-weight-bold" title="Bold">B</button>
++              <button class="tool-btn font-style-italic" title="Italic">I</button>
++              <button class="tool-btn text-decoration-underline" title="Underline">U</button>
++              <button class="tool-btn" title="Text Color"><span class="material-symbols-outlined">format_color_text</span></button>
++              <button class="tool-btn" title="Highlight"><span class="material-symbols-outlined">border_color</span></button>
++            </div>
++
++            <div class="tool-group text-align">
++              <button class="tool-btn correct-trigger hidden" id="btn-is-correct">Is it correct?</button>
++              <div class="dropdown-wrapper">
++                <button class="tool-btn" id="btn-more" title="More"><span class="material-symbols-outlined">more_vert</span></button>
++                <div class="dropdown-menu hidden" id="more-menu">
++                  <label class="dropdown-item">
++                    <input type="checkbox" id="toggle-suggestions">
++                    Turn on suggestions
++                  </label>
++                </div>
++              </div>
++            </div>
++          </div>
++        </div>
++
++        <div class="window-controls">
++          <button class="win-btn" id="win-min" title="Minimize">
++            <span class="material-symbols-outlined">remove</span>
++          </button>
++          <button class="win-btn win-close" id="win-close" title="Close">
++            <span class="material-symbols-outlined">close</span>
++          </button>
++        </div>
++      </header>
++
++      <!-- Writing Area -->
++      <div class="editor-wrapper">
++        <div id="editor" contenteditable="true" spellcheck="false" placeholder="Type here..."></div>
++      </div>
++
++
++      <div class="floating-bar">
++        <div class="lang-toggle">
++          <button class="lang-btn active" id="btn-ml">മലയാളം</button>
++          <button class="lang-btn" id="btn-en">English</button>
++        </div>
++
++        <button class="float-action-btn" id="btn-copy">
++          <span class="material-symbols-outlined">content_copy</span>
++          Copy
++        </button>
++
++        <div class="dropdown-wrapper up">
++          <button class="float-action-btn icon-only" id="btn-lang-selector">
++            <span class="material-symbols-outlined">keyboard_arrow_up</span>
++          </button>
++          <div class="dropdown-menu lang-menu hidden" id="lang-menu">
++            <div class="dropdown-item-lang" data-lang="as" data-name="অসমীয়া (Assamese)">Assamese</div>
++            <div class="dropdown-item-lang" data-lang="bn" data-name="বাংলা (Bengali)">Bengali</div>
++            <div class="dropdown-item-lang" data-lang="gu" data-name="ગુજરાતી (Gujarati)">Gujarati</div>
++            <div class="dropdown-item-lang" data-lang="hi" data-name="हिन्दी (Hindi)">Hindi</div>
++            <div class="dropdown-item-lang" data-lang="kn" data-name="ಕನ್ನಡ (Kannada)">Kannada</div>
++            <div class="dropdown-item-lang" data-lang="ml" data-name="മലയാളം (Malayalam)">Malayalam</div>
++            <div class="dropdown-item-lang" data-lang="mr" data-name="मराठी (Marathi)">Marathi</div>
++            <div class="dropdown-item-lang" data-lang="ne" data-name="नेपाली (Nepali)">Nepali</div>
++            <div class="dropdown-item-lang" data-lang="or" data-name="ଓଡ଼ିଆ (Odia)">Odia</div>
++            <div class="dropdown-item-lang" data-lang="pa" data-name="ਪੰਜਾਬੀ (Punjabi)">Punjabi</div>
++            <div class="dropdown-item-lang" data-lang="sa" data-name="संस्कृतम् (Sanskrit)">Sanskrit</div>
++            <div class="dropdown-item-lang" data-lang="ta" data-name="தமிழ் (Tamil)">Tamil</div>
++            <div class="dropdown-item-lang" data-lang="te" data-name="తెలుగు (Telugu)">Telugu</div>
++          </div>
++        </div>
++      </div>
++    </main>
++
++
++    <!-- Suggestions Overlay Placeholder -->
++    <div id="suggestions-box" class="suggestions-box hidden"></div>
++
++    <!-- Add Words Modal Overlay -->
++    <div id="add-word-modal" class="modal-overlay hidden">
++      <div class="modal-content">
++        <div class="modal-header">
++          <h3>WORDS</h3>
++          <button class="close-modal" id="btn-close-modal"><span class="material-symbols-outlined">close</span></button>
++        </div>
++        
++        <div class="modal-body">
++          <div class="add-word-form">
++            <input type="text" id="input-pattern" class="word-input" placeholder="Pattern in English">
++            <input type="text" id="input-word" class="word-input" placeholder="Word in Malayalam">
++            <button class="btn-primary" id="btn-submit-word">
++              <span class="material-symbols-outlined" style="font-size: 1.2rem;">add</span>
++              ADD WORD
++            </button>
++          </div>
++          
++          <div class="word-table-wrapper">
++            <table class="word-table">
++              <thead>
++                <tr>
++                  <th>Word</th>
++                  <th>Pattern</th>
++                </tr>
++              </thead>
++              <tbody id="word-table-body">
++                <tr>
++                  <td colspan="2" class="empty-data">No data available</td>
++                </tr>
++              </tbody>
++            </table>
++          </div>
++        </div>
++      </div>
++    </div>
++
++  </div>
++
++  <!-- AI Dashboard Modal -->
++  <div id="ai-dashboard-modal" class="modal-overlay hidden">
++    <div class="modal-content">
++      <div class="modal-header">
++        <h3>AI LEARNING DASHBOARD</h3>
++        <button class="close-modal" id="btn-close-ai-modal">
++          <span class="material-symbols-outlined">close</span>
++        </button>
++      </div>
++      <div class="modal-body">
++        <div class="ai-stats-summary">
++          <p>This dashboard shows the words the Local AI has learned from your typing habits. These words are prioritized in future suggestions.</p>
++          <button class="btn-primary" id="btn-clear-ai-memory" style="background-color: #d73a49; margin-top: 10px;">
++            <span class="material-symbols-outlined">delete_sweep</span>
++            Clear All AI Memory
++          </button>
++        </div>
++        <div class="word-table-wrapper" style="margin-top: 20px;">
++          <table class="word-table">
++            <thead>
++              <tr>
++                <th>Pattern (English)</th>
++                <th>Learned Word (Malayalam)</th>
++                <th>Frequency</th>
++              </tr>
++            </thead>
++            <tbody id="ai-word-table-body">
++              <tr><td colspan="3" class="empty-data">No data available</td></tr>
++            </tbody>
++          </table>
++        </div>
++      </div>
++    </div>
++  </div>
++
++  <!-- Correction / Handwriting Modal -->
++  <div id="is-correct-modal" class="modal-overlay hidden">
++    <div class="modal-content correction-modal">
++      <div class="modal-header">
++        <div class="header-titles">
++          <h3>WHAT'S MISSING?</h3>
++          <p class="sub-heading">Draw it here along with the word</p>
++        </div>
++        <button class="close-modal" id="btn-close-correct-modal"><span class="material-symbols-outlined">close</span></button>
++      </div>
++      
++      <div class="modal-body">
++        <div class="correction-display">
++          <div class="info-pair">
++            <span class="label">Typed:</span>
++            <span id="display-english-word" class="val">kaadu</span>
++          </div>
++        </div>
++
++        <div class="canvas-container">
++          <canvas id="drawing-canvas"></canvas>
++          <div class="canvas-hint">Draw over or add missing strokes</div>
++        </div>
++
++        <div id="correction-results" class="correction-results hidden">
++          <p class="results-hint">Pick the correct word:</p>
++          <div id="results-list" class="results-list"></div>
++        </div>
++
++        <div class="modal-footer-actions">
++          <button class="modal-btn secondary" id="btn-clear-canvas">
++            <span class="material-symbols-outlined">delete</span> Clear
++          </button>
++          <button class="modal-btn secondary" id="btn-eraser">
++            <span class="material-symbols-outlined">ink_eraser</span> Eraser
++          </button>
++          <button class="modal-btn primary" id="btn-verify-update">
++            <span class="material-symbols-outlined">check_circle</span> Verify & Update
++          </button>
++        </div>
++      </div>
++    </div>
++  </div>
++
++  <!-- Rename Modal -->
++  <div class="modal hidden" id="rename-modal">
++    <div class="modal-content">
++      <h3 class="modal-title">
++        <span class="material-symbols-outlined">edit</span>
++        Rename Note
++      </h3>
++      <input type="text" id="rename-input" class="modal-input" placeholder="Enter new name...">
++      <div class="modal-actions">
++        <button class="modal-btn secondary" id="btn-cancel-rename">Cancel</button>
++        <button class="modal-btn primary" id="btn-confirm-rename">Rename</button>
++      </div>
++    </div>
++  </div>
++  <!-- Create New Modal -->
++  <div class="modal hidden" id="create-modal">
++    <div class="modal-content">
++      <h3 class="modal-title">
++        <span class="material-symbols-outlined">add_box</span>
++        Create New Note
++      </h3>
++      <input type="text" id="create-input" class="modal-input" placeholder="Enter file name...">
++      <div class="modal-actions">
++        <button class="modal-btn secondary" id="btn-cancel-create">Cancel</button>
++        <button class="modal-btn primary" id="btn-confirm-create">Create</button>
++      </div>
++    </div>
++  </div>
++  <!-- Debug Log Box -->
++  <div id="debug-log-box" class="debug-log-box">
++    <div class="debug-log-header">
++      <span>Debug Logs</span>
++      <button id="btn-clear-logs"><span class="material-symbols-outlined">delete</span></button>
++    </div>
++    <div id="debug-log-content" class="debug-log-content"></div>
++  </div>
++  <script src="renderer.js"></script>
++</body>
++</html>
+diff --git a/main.js b/main.js
+new file mode 100644
+index 0000000..e229e04
+--- /dev/null
++++ b/main.js
+@@ -0,0 +1,63 @@
++const { app, BrowserWindow, ipcMain, dialog } = require('electron');
++const path = require('path');
++
++let mainWindow;
++
++function createWindow () {
++  mainWindow = new BrowserWindow({
++    width: 1280,
++    height: 800,
++    minWidth: 800,
++    minHeight: 600,
++    titleBarStyle: 'hidden',
++    backgroundColor: '#1e1e1e',
++    webPreferences: {
++      nodeIntegration: true,
++      contextIsolation: false
++    }
++  });
++
++  mainWindow.loadFile('index.html');
++  mainWindow.setMenuBarVisibility(false);
++
++  mainWindow.on('closed', () => {
++    mainWindow = null;
++  });
++}
++
++app.whenReady().then(() => {
++  createWindow();
++
++  // Handle Note Minimizing
++  ipcMain.on('minimize-window', () => {
++    if (mainWindow) mainWindow.minimize();
++  });
++
++  // Handle Note Closing
++  ipcMain.on('close-window', () => {
++    if (mainWindow) mainWindow.close();
++  });
++
++  // Handle Note Selecting from Windows Explorer
++  ipcMain.handle('open-file-dialog', async () => {
++    console.log('Main Process: Received open-file-dialog request');
++    try {
++      const result = await dialog.showOpenDialog(mainWindow, {
++        properties: ['openFile'],
++        filters: [{ name: 'Text Files', extensions: ['txt'] }]
++      });
++      return result.filePaths;
++    } catch (e) {
++      console.error('File dialog error:', e);
++      return [];
++    }
++  });
++
++  app.on('activate', function () {
++    if (BrowserWindow.getAllWindows().length === 0) createWindow();
++  });
++});
++
++app.on('window-all-closed', function () {
++  if (process.platform !== 'darwin') app.quit();
++});
+diff --git a/package-lock.json b/package-lock.json
+new file mode 100644
+index 0000000..9089505
+--- /dev/null
++++ b/package-lock.json
+@@ -0,0 +1,872 @@
++{
++  "name": "manglish-editor",
++  "version": "1.0.0",
++  "lockfileVersion": 3,
++  "requires": true,
++  "packages": {
++    "": {
++      "name": "manglish-editor",
++      "version": "1.0.0",
++      "license": "ISC",
++      "devDependencies": {
++        "electron": "^28.2.0"
++      }
++    },
++    "node_modules/@electron/get": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/@electron/get/-/get-2.0.3.tgz",
++      "integrity": "sha512-Qkzpg2s9GnVV2I2BjRksUi43U5e6+zaQMcjoJy0C+C5oxaKl+fmckGDQFtRpZpZV0NQekuZZ+tGz7EA9TVnQtQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "debug": "^4.1.1",
++        "env-paths": "^2.2.0",
++        "fs-extra": "^8.1.0",
++        "got": "^11.8.5",
++        "progress": "^2.0.3",
++        "semver": "^6.2.0",
++        "sumchecker": "^3.0.1"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "optionalDependencies": {
++        "global-agent": "^3.0.0"
++      }
++    },
++    "node_modules/@sindresorhus/is": {
++      "version": "4.6.0",
++      "resolved": "https://registry.npmjs.org/@sindresorhus/is/-/is-4.6.0.tgz",
++      "integrity": "sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sindresorhus/is?sponsor=1"
++      }
++    },
++    "node_modules/@szmarczak/http-timer": {
++      "version": "4.0.6",
++      "resolved": "https://registry.npmjs.org/@szmarczak/http-timer/-/http-timer-4.0.6.tgz",
++      "integrity": "sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "defer-to-connect": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/@types/cacheable-request": {
++      "version": "6.0.3",
++      "resolved": "https://registry.npmjs.org/@types/cacheable-request/-/cacheable-request-6.0.3.tgz",
++      "integrity": "sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/http-cache-semantics": "*",
++        "@types/keyv": "^3.1.4",
++        "@types/node": "*",
++        "@types/responselike": "^1.0.0"
++      }
++    },
++    "node_modules/@types/http-cache-semantics": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/@types/http-cache-semantics/-/http-cache-semantics-4.2.0.tgz",
++      "integrity": "sha512-L3LgimLHXtGkWikKnsPg0/VFx9OGZaC+eN1u4r+OB1XRqH3meBIAVC2zr1WdMH+RHmnRkqliQAOHNJ/E0j/e0Q==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@types/keyv": {
++      "version": "3.1.4",
++      "resolved": "https://registry.npmjs.org/@types/keyv/-/keyv-3.1.4.tgz",
++      "integrity": "sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
++    "node_modules/@types/node": {
++      "version": "18.19.130",
++      "resolved": "https://registry.npmjs.org/@types/node/-/node-18.19.130.tgz",
++      "integrity": "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "undici-types": "~5.26.4"
++      }
++    },
++    "node_modules/@types/responselike": {
++      "version": "1.0.3",
++      "resolved": "https://registry.npmjs.org/@types/responselike/-/responselike-1.0.3.tgz",
++      "integrity": "sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
++    "node_modules/@types/yauzl": {
++      "version": "2.10.3",
++      "resolved": "https://registry.npmjs.org/@types/yauzl/-/yauzl-2.10.3.tgz",
++      "integrity": "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
++    "node_modules/boolean": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/boolean/-/boolean-3.2.0.tgz",
++      "integrity": "sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==",
++      "deprecated": "Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.",
++      "dev": true,
++      "license": "MIT",
++      "optional": true
++    },
++    "node_modules/buffer-crc32": {
++      "version": "0.2.13",
++      "resolved": "https://registry.npmjs.org/buffer-crc32/-/buffer-crc32-0.2.13.tgz",
++      "integrity": "sha512-VO9Ht/+p3SN7SKWqcrgEzjGbRSJYTx+Q1pTQC0wrWqHx0vpJraQ6GtHx8tvcg1rlK1byhU5gccxgOgj7B0TDkQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": "*"
++      }
++    },
++    "node_modules/cacheable-lookup": {
++      "version": "5.0.4",
++      "resolved": "https://registry.npmjs.org/cacheable-lookup/-/cacheable-lookup-5.0.4.tgz",
++      "integrity": "sha512-2/kNscPhpcxrOigMZzbiWF7dz8ilhb/nIHU3EyZiXWXpeq/au8qJ8VhdftMkty3n7Gj6HIGalQG8oiBNB3AJgA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10.6.0"
++      }
++    },
++    "node_modules/cacheable-request": {
++      "version": "7.0.4",
++      "resolved": "https://registry.npmjs.org/cacheable-request/-/cacheable-request-7.0.4.tgz",
++      "integrity": "sha512-v+p6ongsrp0yTGbJXjgxPow2+DL93DASP4kXCDKb8/bwRtt9OEF3whggkkDkGNzgcWy2XaF4a8nZglC7uElscg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "clone-response": "^1.0.2",
++        "get-stream": "^5.1.0",
++        "http-cache-semantics": "^4.0.0",
++        "keyv": "^4.0.0",
++        "lowercase-keys": "^2.0.0",
++        "normalize-url": "^6.0.1",
++        "responselike": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/clone-response": {
++      "version": "1.0.3",
++      "resolved": "https://registry.npmjs.org/clone-response/-/clone-response-1.0.3.tgz",
++      "integrity": "sha512-ROoL94jJH2dUVML2Y/5PEDNaSHgeOdSDicUyS7izcF63G6sTc/FTjLub4b8Il9S8S0beOfYt0TaA5qvFK+w0wA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "mimic-response": "^1.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/debug": {
++      "version": "4.4.3",
++      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
++      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "ms": "^2.1.3"
++      },
++      "engines": {
++        "node": ">=6.0"
++      },
++      "peerDependenciesMeta": {
++        "supports-color": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/decompress-response": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/decompress-response/-/decompress-response-6.0.0.tgz",
++      "integrity": "sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "mimic-response": "^3.1.0"
++      },
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/decompress-response/node_modules/mimic-response": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/mimic-response/-/mimic-response-3.1.0.tgz",
++      "integrity": "sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/defer-to-connect": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/defer-to-connect/-/defer-to-connect-2.0.1.tgz",
++      "integrity": "sha512-4tvttepXG1VaYGrRibk5EwJd1t4udunSOVMdLSAL6mId1ix438oPwPZMALY41FCijukO1L0twNcGsdzS7dHgDg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/define-data-property": {
++      "version": "1.1.4",
++      "resolved": "https://registry.npmjs.org/define-data-property/-/define-data-property-1.1.4.tgz",
++      "integrity": "sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "es-define-property": "^1.0.0",
++        "es-errors": "^1.3.0",
++        "gopd": "^1.0.1"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/define-properties": {
++      "version": "1.2.1",
++      "resolved": "https://registry.npmjs.org/define-properties/-/define-properties-1.2.1.tgz",
++      "integrity": "sha512-8QmQKqEASLd5nx0U1B1okLElbUuuttJ/AnYmRXbbbGDWh6uS208EjD4Xqq/I9wK7u0v6O08XhTWnt5XtEbR6Dg==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "define-data-property": "^1.0.1",
++        "has-property-descriptors": "^1.0.0",
++        "object-keys": "^1.1.1"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/detect-node": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/detect-node/-/detect-node-2.1.0.tgz",
++      "integrity": "sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true
++    },
++    "node_modules/electron": {
++      "version": "28.3.3",
++      "resolved": "https://registry.npmjs.org/electron/-/electron-28.3.3.tgz",
++      "integrity": "sha512-ObKMLSPNhomtCOBAxFS8P2DW/4umkh72ouZUlUKzXGtYuPzgr1SYhskhFWgzAsPtUzhL2CzyV2sfbHcEW4CXqw==",
++      "dev": true,
++      "hasInstallScript": true,
++      "license": "MIT",
++      "dependencies": {
++        "@electron/get": "^2.0.0",
++        "@types/node": "^18.11.18",
++        "extract-zip": "^2.0.1"
++      },
++      "bin": {
++        "electron": "cli.js"
++      },
++      "engines": {
++        "node": ">= 12.20.55"
++      }
++    },
++    "node_modules/end-of-stream": {
++      "version": "1.4.5",
++      "resolved": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.4.5.tgz",
++      "integrity": "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "once": "^1.4.0"
++      }
++    },
++    "node_modules/env-paths": {
++      "version": "2.2.1",
++      "resolved": "https://registry.npmjs.org/env-paths/-/env-paths-2.2.1.tgz",
++      "integrity": "sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/es-define-property": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
++      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/es-errors": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
++      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/es6-error": {
++      "version": "4.1.1",
++      "resolved": "https://registry.npmjs.org/es6-error/-/es6-error-4.1.1.tgz",
++      "integrity": "sha512-Um/+FxMr9CISWh0bi5Zv0iOD+4cFh5qLeks1qhAopKVAJw3drgKbKySikp7wGhDL0HPeaja0P5ULZrxLkniUVg==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true
++    },
++    "node_modules/escape-string-regexp": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz",
++      "integrity": "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/extract-zip": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/extract-zip/-/extract-zip-2.0.1.tgz",
++      "integrity": "sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg==",
++      "dev": true,
++      "license": "BSD-2-Clause",
++      "dependencies": {
++        "debug": "^4.1.1",
++        "get-stream": "^5.1.0",
++        "yauzl": "^2.10.0"
++      },
++      "bin": {
++        "extract-zip": "cli.js"
++      },
++      "engines": {
++        "node": ">= 10.17.0"
++      },
++      "optionalDependencies": {
++        "@types/yauzl": "^2.9.1"
++      }
++    },
++    "node_modules/fd-slicer": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/fd-slicer/-/fd-slicer-1.1.0.tgz",
++      "integrity": "sha512-cE1qsB/VwyQozZ+q1dGxR8LBYNZeofhEdUNGSMbQD3Gw2lAzX9Zb3uIU6Ebc/Fmyjo9AWWfnn0AUCHqtevs/8g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "pend": "~1.2.0"
++      }
++    },
++    "node_modules/fs-extra": {
++      "version": "8.1.0",
++      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-8.1.0.tgz",
++      "integrity": "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "graceful-fs": "^4.2.0",
++        "jsonfile": "^4.0.0",
++        "universalify": "^0.1.0"
++      },
++      "engines": {
++        "node": ">=6 <7 || >=8"
++      }
++    },
++    "node_modules/get-stream": {
++      "version": "5.2.0",
++      "resolved": "https://registry.npmjs.org/get-stream/-/get-stream-5.2.0.tgz",
++      "integrity": "sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "pump": "^3.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/global-agent": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/global-agent/-/global-agent-3.0.0.tgz",
++      "integrity": "sha512-PT6XReJ+D07JvGoxQMkT6qji/jVNfX/h364XHZOWeRzy64sSFr+xJ5OX7LI3b4MPQzdL4H8Y8M0xzPpsVMwA8Q==",
++      "dev": true,
++      "license": "BSD-3-Clause",
++      "optional": true,
++      "dependencies": {
++        "boolean": "^3.0.1",
++        "es6-error": "^4.1.1",
++        "matcher": "^3.0.0",
++        "roarr": "^2.15.3",
++        "semver": "^7.3.2",
++        "serialize-error": "^7.0.1"
++      },
++      "engines": {
++        "node": ">=10.0"
++      }
++    },
++    "node_modules/global-agent/node_modules/semver": {
++      "version": "7.7.4",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz",
++      "integrity": "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==",
++      "dev": true,
++      "license": "ISC",
++      "optional": true,
++      "bin": {
++        "semver": "bin/semver.js"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/globalthis": {
++      "version": "1.0.4",
++      "resolved": "https://registry.npmjs.org/globalthis/-/globalthis-1.0.4.tgz",
++      "integrity": "sha512-DpLKbNU4WylpxJykQujfCcwYWiV/Jhm50Goo0wrVILAv5jOr9d+H+UR3PhSCD2rCCEIg0uc+G+muBTwD54JhDQ==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "define-properties": "^1.2.1",
++        "gopd": "^1.0.1"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/gopd": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
++      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/got": {
++      "version": "11.8.6",
++      "resolved": "https://registry.npmjs.org/got/-/got-11.8.6.tgz",
++      "integrity": "sha512-6tfZ91bOr7bOXnK7PRDCGBLa1H4U080YHNaAQ2KsMGlLEzRbk44nsZF2E1IeRc3vtJHPVbKCYgdFbaGO2ljd8g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@sindresorhus/is": "^4.0.0",
++        "@szmarczak/http-timer": "^4.0.5",
++        "@types/cacheable-request": "^6.0.1",
++        "@types/responselike": "^1.0.0",
++        "cacheable-lookup": "^5.0.3",
++        "cacheable-request": "^7.0.2",
++        "decompress-response": "^6.0.0",
++        "http2-wrapper": "^1.0.0-beta.5.2",
++        "lowercase-keys": "^2.0.0",
++        "p-cancelable": "^2.0.0",
++        "responselike": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=10.19.0"
++      },
++      "funding": {
++        "url": "https://github.com/sindresorhus/got?sponsor=1"
++      }
++    },
++    "node_modules/graceful-fs": {
++      "version": "4.2.11",
++      "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
++      "integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/has-property-descriptors": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/has-property-descriptors/-/has-property-descriptors-1.0.2.tgz",
++      "integrity": "sha512-55JNKuIW+vq4Ke1BjOTjM2YctQIvCT7GFzHwmfZPGo5wnrgkid0YQtnAleFSqumZm4az3n2BS+erby5ipJdgrg==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "es-define-property": "^1.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/http-cache-semantics": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/http-cache-semantics/-/http-cache-semantics-4.2.0.tgz",
++      "integrity": "sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ==",
++      "dev": true,
++      "license": "BSD-2-Clause"
++    },
++    "node_modules/http2-wrapper": {
++      "version": "1.0.3",
++      "resolved": "https://registry.npmjs.org/http2-wrapper/-/http2-wrapper-1.0.3.tgz",
++      "integrity": "sha512-V+23sDMr12Wnz7iTcDeJr3O6AIxlnvT/bmaAAAP/Xda35C90p9599p0F1eHR/N1KILWSoWVAiOMFjBBXaXSMxg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "quick-lru": "^5.1.1",
++        "resolve-alpn": "^1.0.0"
++      },
++      "engines": {
++        "node": ">=10.19.0"
++      }
++    },
++    "node_modules/json-buffer": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/json-buffer/-/json-buffer-3.0.1.tgz",
++      "integrity": "sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/json-stringify-safe": {
++      "version": "5.0.1",
++      "resolved": "https://registry.npmjs.org/json-stringify-safe/-/json-stringify-safe-5.0.1.tgz",
++      "integrity": "sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==",
++      "dev": true,
++      "license": "ISC",
++      "optional": true
++    },
++    "node_modules/jsonfile": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-4.0.0.tgz",
++      "integrity": "sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==",
++      "dev": true,
++      "license": "MIT",
++      "optionalDependencies": {
++        "graceful-fs": "^4.1.6"
++      }
++    },
++    "node_modules/keyv": {
++      "version": "4.5.4",
++      "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
++      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "json-buffer": "3.0.1"
++      }
++    },
++    "node_modules/lowercase-keys": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/lowercase-keys/-/lowercase-keys-2.0.0.tgz",
++      "integrity": "sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/matcher": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/matcher/-/matcher-3.0.0.tgz",
++      "integrity": "sha512-OkeDaAZ/bQCxeFAozM55PKcKU0yJMPGifLwV4Qgjitu+5MoAfSQN4lsLJeXZ1b8w0x+/Emda6MZgXS1jvsapng==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "escape-string-regexp": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/mimic-response": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/mimic-response/-/mimic-response-1.0.1.tgz",
++      "integrity": "sha512-j5EctnkH7amfV/q5Hgmoal1g2QHFJRraOtmx0JpIqkxhBhI/lJSl1nMpQ45hVarwNETOoWEimndZ4QK0RHxuxQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=4"
++      }
++    },
++    "node_modules/ms": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
++      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/normalize-url": {
++      "version": "6.1.0",
++      "resolved": "https://registry.npmjs.org/normalize-url/-/normalize-url-6.1.0.tgz",
++      "integrity": "sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/object-keys": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz",
++      "integrity": "sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/once": {
++      "version": "1.4.0",
++      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
++      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "wrappy": "1"
++      }
++    },
++    "node_modules/p-cancelable": {
++      "version": "2.1.1",
++      "resolved": "https://registry.npmjs.org/p-cancelable/-/p-cancelable-2.1.1.tgz",
++      "integrity": "sha512-BZOr3nRQHOntUjTrH8+Lh54smKHoHyur8We1V8DSMVrl5A2malOOwuJRnKRDjSnkoeBh4at6BwEnb5I7Jl31wg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/pend": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz",
++      "integrity": "sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/progress": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/progress/-/progress-2.0.3.tgz",
++      "integrity": "sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.4.0"
++      }
++    },
++    "node_modules/pump": {
++      "version": "3.0.4",
++      "resolved": "https://registry.npmjs.org/pump/-/pump-3.0.4.tgz",
++      "integrity": "sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "end-of-stream": "^1.1.0",
++        "once": "^1.3.1"
++      }
++    },
++    "node_modules/quick-lru": {
++      "version": "5.1.1",
++      "resolved": "https://registry.npmjs.org/quick-lru/-/quick-lru-5.1.1.tgz",
++      "integrity": "sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/resolve-alpn": {
++      "version": "1.2.1",
++      "resolved": "https://registry.npmjs.org/resolve-alpn/-/resolve-alpn-1.2.1.tgz",
++      "integrity": "sha512-0a1F4l73/ZFZOakJnQ3FvkJ2+gSTQWz/r2KE5OdDY0TxPm5h4GkqkWWfM47T7HsbnOtcJVEF4epCVy6u7Q3K+g==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/responselike": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/responselike/-/responselike-2.0.1.tgz",
++      "integrity": "sha512-4gl03wn3hj1HP3yzgdI7d3lCkF95F21Pz4BPGvKHinyQzALR5CapwC8yIi0Rh58DEMQ/SguC03wFj2k0M/mHhw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "lowercase-keys": "^2.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/roarr": {
++      "version": "2.15.4",
++      "resolved": "https://registry.npmjs.org/roarr/-/roarr-2.15.4.tgz",
++      "integrity": "sha512-CHhPh+UNHD2GTXNYhPWLnU8ONHdI+5DI+4EYIAOaiD63rHeYlZvyh8P+in5999TTSFgUYuKUAjzRI4mdh/p+2A==",
++      "dev": true,
++      "license": "BSD-3-Clause",
++      "optional": true,
++      "dependencies": {
++        "boolean": "^3.0.1",
++        "detect-node": "^2.0.4",
++        "globalthis": "^1.0.1",
++        "json-stringify-safe": "^5.0.1",
++        "semver-compare": "^1.0.0",
++        "sprintf-js": "^1.1.2"
++      },
++      "engines": {
++        "node": ">=8.0"
++      }
++    },
++    "node_modules/semver": {
++      "version": "6.3.1",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz",
++      "integrity": "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==",
++      "dev": true,
++      "license": "ISC",
++      "bin": {
++        "semver": "bin/semver.js"
++      }
++    },
++    "node_modules/semver-compare": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/semver-compare/-/semver-compare-1.0.0.tgz",
++      "integrity": "sha512-YM3/ITh2MJ5MtzaM429anh+x2jiLVjqILF4m4oyQB18W7Ggea7BfqdH/wGMK7dDiMghv/6WG7znWMwUDzJiXow==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true
++    },
++    "node_modules/serialize-error": {
++      "version": "7.0.1",
++      "resolved": "https://registry.npmjs.org/serialize-error/-/serialize-error-7.0.1.tgz",
++      "integrity": "sha512-8I8TjW5KMOKsZQTvoxjuSIa7foAwPWGOts+6o7sgjz41/qMD9VQHEDxi6PBvK2l0MXUmqZyNpUK+T2tQaaElvw==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "type-fest": "^0.13.1"
++      },
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/sprintf-js": {
++      "version": "1.1.3",
++      "resolved": "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.1.3.tgz",
++      "integrity": "sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==",
++      "dev": true,
++      "license": "BSD-3-Clause",
++      "optional": true
++    },
++    "node_modules/sumchecker": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/sumchecker/-/sumchecker-3.0.1.tgz",
++      "integrity": "sha512-MvjXzkz/BOfyVDkG0oFOtBxHX2u3gKbMHIF/dXblZsgD3BWOFLmHovIpZY7BykJdAjcqRCBi1WYBNdEC9yI7vg==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "debug": "^4.1.0"
++      },
++      "engines": {
++        "node": ">= 8.0"
++      }
++    },
++    "node_modules/type-fest": {
++      "version": "0.13.1",
++      "resolved": "https://registry.npmjs.org/type-fest/-/type-fest-0.13.1.tgz",
++      "integrity": "sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg==",
++      "dev": true,
++      "license": "(MIT OR CC0-1.0)",
++      "optional": true,
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/undici-types": {
++      "version": "5.26.5",
++      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz",
++      "integrity": "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/universalify": {
++      "version": "0.1.2",
++      "resolved": "https://registry.npmjs.org/universalify/-/universalify-0.1.2.tgz",
++      "integrity": "sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 4.0.0"
++      }
++    },
++    "node_modules/wrappy": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
++      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/yauzl": {
++      "version": "2.10.0",
++      "resolved": "https://registry.npmjs.org/yauzl/-/yauzl-2.10.0.tgz",
++      "integrity": "sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "buffer-crc32": "~0.2.3",
++        "fd-slicer": "~1.1.0"
++      }
++    }
++  }
++}
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..d7290a0
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,14 @@
++{
++  "name": "nakshathram",
++  "version": "1.0.0",
++  "description": "Nakshathram - A beautiful Manglish to Malayalam rich text editor.",
++  "main": "main.js",
++  "scripts": {
++    "start": "electron ."
++  },
++  "author": "",
++  "license": "ISC",
++  "devDependencies": {
++    "electron": "^28.2.0"
++  }
++}
+diff --git a/renderer.js b/renderer.js
+new file mode 100644
+index 0000000..a57ed58
+--- /dev/null
++++ b/renderer.js
+@@ -0,0 +1,1296 @@
++const { ipcRenderer } = require('electron');
++const fs = require('fs');
++const path = require('path');
++const editor = document.getElementById('editor');
++const btnMl = document.getElementById('btn-ml');
++const btnEn = document.getElementById('btn-en');
++const suggestionsBox = document.getElementById('suggestions-box');
++const debugLogBox = document.getElementById('debug-log-box');
++const debugLogContent = document.getElementById('debug-log-content');
++const btnClearLogs = document.getElementById('btn-clear-logs');
++
++// Debug Logging Logic
++function logToBox(message, type = 'info') {
++  if (!debugLogContent) return;
++  const entry = document.createElement('div');
++  entry.className = `log-entry log-${type}`;
++  const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
++  entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
++  debugLogContent.appendChild(entry);
++  debugLogContent.scrollTop = debugLogContent.scrollHeight;
++  if (debugLogBox) debugLogBox.classList.remove('hidden');
++}
++
++// Override console
++const originalLog = console.log;
++const originalError = console.error;
++console.log = (...args) => {
++  originalLog(...args);
++  logToBox(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '), 'info');
++};
++console.error = (...args) => {
++  originalError(...args);
++  logToBox(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '), 'error');
++};
++
++if (btnClearLogs) {
++  btnClearLogs.addEventListener('click', () => {
++    debugLogContent.innerHTML = '';
++  });
++}
++
++console.log('Nakshathram Editor Initialized');
++
++// Toolbar & Menu Elements
++const btnMore = document.getElementById('btn-more');
++const moreMenu = document.getElementById('more-menu');
++
++let selectedCorrection = null;
++const toggleSuggestions = document.getElementById('toggle-suggestions');
++const btnLangSelector = document.getElementById('btn-lang-selector');
++const langMenu = document.getElementById('lang-menu');
++const langItems = document.querySelectorAll('.dropdown-item-lang');
++
++// Styling Buttons
++const btnFsDec = document.getElementById('btn-fs-dec');
++const btnFsInc = document.getElementById('btn-fs-inc');
++const fsDisplay = document.getElementById('current-fs');
++
++// File Management Elements
++const btnNewFileMain = document.getElementById('btn-new-file-main');
++const newFileMenu = document.getElementById('new-file-menu');
++const btnCreateNew = document.getElementById('btn-create-new');
++const btnSelectFile = document.getElementById('btn-select-file');
++const listToday = document.getElementById('file-list-today');
++const listYesterday = document.getElementById('file-list-yesterday');
++const listEarlier = document.getElementById('file-list-earlier');
++
++// Correction Modal Elements
++const btnIsCorrect = document.getElementById('btn-is-correct');
++const isCorrectModal = document.getElementById('is-correct-modal');
++const btnCloseCorrectModal = document.getElementById('btn-close-correct-modal');
++const btnClearCanvas = document.getElementById('btn-clear-canvas');
++const btnVerifyUpdate = document.getElementById('btn-verify-update');
++const btnEraser = document.getElementById('btn-eraser');
++const drawingCanvas = document.getElementById('drawing-canvas');
++const displayEnglishWord = document.getElementById('display-english-word');
++const correctionResults = document.getElementById('correction-results');
++const resultsList = document.getElementById('results-list');
++
++// AI & Custom Word Modal Elements
++const btnAddWordTarget = document.getElementById('btn-add-word');
++const addWordModal = document.getElementById('add-word-modal');
++const btnCloseModal = document.getElementById('btn-close-modal');
++const btnSubmitWord = document.getElementById('btn-submit-word');
++const inputPattern = document.getElementById('input-pattern');
++const inputWord = document.getElementById('input-word');
++const wordTableBody = document.getElementById('word-table-body');
++const btnAiDashboard = document.getElementById('btn-ai-dashboard');
++const aiDashboardModal = document.getElementById('ai-dashboard-modal');
++const btnCloseAiModal = document.getElementById('btn-close-ai-modal');
++const btnClearAiMemory = document.getElementById('btn-clear-ai-memory');
++const aiWordTableBody = document.getElementById('ai-word-table-body');
++
++let currentLang = localStorage.getItem('last_selected_lang') || 'ml'; // Active Indian language
++let isEnglishMode = localStorage.getItem('last_is_english_mode') === 'true'; // Toggle between English and the current Indian language
++let isTranslating = false;
++
++// Correction state
++let lastTranslitData = {
++  english: '',
++  malayalam: '',
++  selectionPath: null // Used to re-select the word if needed
++};
++
++// Custom words state
++let customWords = JSON.parse(localStorage.getItem('manglish_custom_words') || '[]');
++
++const languages = {
++  'ml': { name: 'മലയാളം', googleCode: 'ml-t-i0-und' },
++  'as': { name: 'অসমীয়া', googleCode: 'as-t-i0-und' },
++  'bn': { name: 'বাংলা', googleCode: 'bn-t-i0-und' },
++  'gu': { name: 'ગુજરાતી', googleCode: 'gu-t-i0-und' },
++  'hi': { name: 'हिन्दी', googleCode: 'hi-t-i0-und' },
++  'kn': { name: 'ಕನ್ನಡ', googleCode: 'kn-t-i0-und' },
++  'mr': { name: 'मराठी', googleCode: 'mr-t-i0-und' },
++  'ne': { name: 'नेपाली', googleCode: 'ne-t-i0-und' },
++  'or': { name: 'ଓଡ଼ିଆ', googleCode: 'or-t-i0-und' },
++  'pa': { name: 'ਪੰਜਾਬੀ', googleCode: 'pa-t-i0-und' },
++  'sa': { name: 'संस्कृतम्', googleCode: 'sa-t-i0-und' },
++  'ta': { name: 'தமிழ்', googleCode: 'ta-t-i0-und' },
++  'te': { name: 'తెలుగు', googleCode: 'te-t-i0-und' }
++};
++
++// Toggle Languages
++btnMl.addEventListener('click', () => {
++  setEnglishMode(false);
++});
++
++btnEn.addEventListener('click', () => {
++  setEnglishMode(true);
++});
++
++function setEnglishMode(isEn) {
++  isEnglishMode = isEn;
++  localStorage.setItem('last_is_english_mode', isEn);
++  syncLanguageUI();
++  editor.focus();
++}
++
++function syncLanguageUI() {
++  // Update main toggle buttons
++  if (isEnglishMode) {
++    btnEn.classList.add('active');
++    btnMl.classList.remove('active');
++  } else {
++    btnMl.classList.add('active');
++    btnEn.classList.remove('active');
++  }
++
++  // Update Indian language button text
++  if (languages[currentLang]) {
++    btnMl.textContent = languages[currentLang].name;
++  }
++
++  // Update active state in dropdown menu
++  langItems.forEach(item => {
++    if (item.getAttribute('data-lang') === currentLang) {
++      item.classList.add('active');
++    } else {
++      item.classList.remove('active');
++    }
++  });
++}
++
++// Focus editor and sync UI on load
++window.addEventListener('DOMContentLoaded', () => {
++  syncLanguageUI();
++  editor.focus();
++});
++
++// Transliteration trigger
++editor.addEventListener('keyup', async (e) => {
++  if (isEnglishMode) return;
++  
++  // We trigger on Space (code: Space) and Enter (code: Enter)
++  if (e.code === 'Space' || e.code === 'Enter') {
++    await handleTransliteration(e.code === 'Space' ? ' ' : '\n');
++  }
++});
++
++// Live typing logic for suggestions
++editor.addEventListener('input', async () => {
++  if (isEnglishMode || !isSuggestionsEnabled || isTranslating) {
++    suggestionsBox.classList.add('hidden');
++    return;
++  }
++
++  const selection = window.getSelection();
++  if (!selection.rangeCount) return;
++
++  const node = selection.getRangeAt(0).startContainer;
++  if (node.nodeType !== Node.TEXT_NODE) return;
++
++  const textBeforeCursor = node.textContent.substring(0, selection.getRangeAt(0).startOffset);
++  const match = textBeforeCursor.match(/([a-zA-Z]+)$/);
++  
++  if (!match) {
++    suggestionsBox.classList.add('hidden');
++    return;
++  }
++  
++  const word = match[1];
++  
++  // Custom dict check
++  const customMatch = customWords.find(cw => cw.pattern.startsWith(word.toLowerCase()));
++  const customArr = customMatch ? [customMatch.word] : [];
++
++  try {
++    const langConfig = languages[currentLang];
++    // Fetch from both APIs simultaneously
++    const [varnamRes, googleRes] = await Promise.all([
++      fetch(`https://api.varnamproject.com/tl/${currentLang}/${word}`).catch(() => null),
++      fetch(`https://inputtools.google.com/request?text=${word}&itc=${langConfig.googleCode}&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=editor`).catch(() => null)
++    ]);
++
++    let varnamWords = [];
++    if (varnamRes && varnamRes.ok) {
++      const data = await varnamRes.json();
++      if (data.success && data.result) varnamWords = data.result;
++    }
++
++    let searchEngineWords = [];
++    if (googleRes && googleRes.ok) {
++      const gData = await googleRes.json();
++      if (gData[0] === 'SUCCESS' && gData[1] && gData[1][0] && gData[1][0][1]) {
++        searchEngineWords = gData[1][0][1];
++      }
++    }
++
++    // Combine them, giving priority to search engine (Google) results for accuracy
++    let combinedApiMatches = [...new Set([...searchEngineWords, ...varnamWords])];
++    
++    // Local AI Sorting Strategy
++    const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
++    const wordLearnings = learned[word.toLowerCase()];
++    if (wordLearnings) {
++      combinedApiMatches.sort((a, b) => {
++        const scoreA = wordLearnings[a] || 0;
++        const scoreB = wordLearnings[b] || 0;
++        return scoreB - scoreA; // descending
++      });
++    }
++
++    showSuggestionsForWord(word, customArr, combinedApiMatches);
++    
++  } catch (e) {
++    console.error("Suggestion fetch error:", e);
++  }
++});
++
++async function handleTransliteration(triggerChar, forcedReplacement = null) {
++  if (isTranslating) return;
++
++  // We hide suggestions and correction trigger immediately
++  suggestionsBox.classList.add('hidden');
++  document.getElementById('btn-is-correct').classList.add('hidden');
++
++  const selection = window.getSelection();
++  if (!selection.rangeCount) return;
++
++  const range = selection.getRangeAt(0);
++  const node = range.startContainer;
++  
++  // Only process if we are inside a text node
++  if (node.nodeType !== Node.TEXT_NODE) return;
++
++  const cursorPosition = range.startOffset;
++  const text = node.textContent;
++
++  // We need to look back from the cursor (excluding the space/enter that was just typed if it's there)
++  // Actually, 'keyup' means the space is already in the text node, OR it resulted in a new line.
++  // To be safe, let's parse the text before the cursor.
++  
++  // If the trigger was a space, there's usually a space at cursorPosition - 1.
++  const checkOffset = triggerChar === ' ' ? cursorPosition - 1 : cursorPosition;
++  if (checkOffset <= 0) return;
++
++  const textBeforeCursor = text.substring(0, checkOffset);
++  
++  // Match the last English word
++  const match = textBeforeCursor.match(/([a-zA-Z]+)$/);
++  if (!match) return;
++
++  const wordToTranslate = match[1];
++  const wordStartOffset = checkOffset - wordToTranslate.length;
++  const lowercaseWord = wordToTranslate.toLowerCase();
++
++  try {
++    isTranslating = true;
++    let malayalamWord = forcedReplacement;
++
++    if (!malayalamWord) {
++      console.log(`Fetching transliteration for: ${wordToTranslate}`);
++      // Check custom dictionary first
++      const customMatch = customWords.find(cw => cw.pattern === lowercaseWord);
++      if (customMatch) {
++        malayalamWord = customMatch.word;
++      } else {
++        // Fetch from both APIs for the final space/enter replacement
++        try {
++          const langConfig = languages[currentLang];
++          const [varnamRes, googleRes] = await Promise.all([
++            fetch(`https://api.varnamproject.com/tl/${currentLang}/${wordToTranslate}`).catch(() => null),
++            fetch(`https://inputtools.google.com/request?text=${wordToTranslate}&itc=${langConfig.googleCode}&num=3&cp=0&cs=1&ie=utf-8&oe=utf-8&app=editor`).catch(() => null)
++          ]);
++
++          let bestMatch = null;
++
++          if (googleRes && googleRes.ok) {
++            const gData = await googleRes.json();
++            if (gData[0] === 'SUCCESS' && gData[1] && gData[1][0] && gData[1][0][1]) {
++              bestMatch = gData[1][0][1][0]; // Top search-engine result
++            }
++          }
++
++          if (!bestMatch && varnamRes && varnamRes.ok) {
++            const vData = await varnamRes.json();
++            if (vData.success && vData.result && vData.result.length > 0) {
++              bestMatch = vData.result[0];
++            }
++          }
++
++          malayalamWord = bestMatch;
++        } catch (e) {
++          console.error("Transliteration fetch error:", e);
++        }
++      }
++    }
++
++    if (malayalamWord) {
++      // Local AI Learning - Boost future suggestions
++      const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
++      if (!learned[lowercaseWord]) {
++        learned[lowercaseWord] = {};
++      }
++      learned[lowercaseWord][malayalamWord] = (learned[lowercaseWord][malayalamWord] || 0) + 1;
++      localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
++
++      // Create a range that selects exactly the typed English word
++      const replaceRange = document.createRange();
++      replaceRange.setStart(node, wordStartOffset);
++      replaceRange.setEnd(node, checkOffset);
++      
++      // Delete the English word
++      replaceRange.deleteContents();
++
++      // Insert the Malayalam word
++      const textNode = document.createTextNode(malayalamWord);
++      replaceRange.insertNode(textNode);
++
++      // Restore cursor position smoothly
++      const newRange = document.createRange();
++      newRange.setStart(textNode, textNode.length);
++      newRange.setEnd(textNode, textNode.length);
++      
++      newRange.collapse(true);
++      selection.removeAllRanges();
++      selection.addRange(newRange);
++      selection.modify("move", "forward", "character");
++
++      // Store data for "Is it correct?" feature
++      lastTranslitData = {
++        english: wordToTranslate,
++        malayalam: malayalamWord
++      };
++      console.log(`Transliterated: ${wordToTranslate} -> ${malayalamWord}`);
++      document.getElementById('btn-is-correct').classList.remove('hidden');
++    }
++  } catch (error) {
++    console.error("Transliteration Error:", error);
++  } finally {
++    isTranslating = false;
++  }
++}
++
++// Basic Toolbar button functionality integration (Bold, Italic, U, etc.)
++const styleButtons = {
++  '.font-weight-bold': 'bold',
++  '.font-style-italic': 'italic',
++  '.text-decoration-underline': 'underline',
++};
++
++for (const [selector, command] of Object.entries(styleButtons)) {
++  const btn = document.querySelector(selector);
++  if (btn) {
++    btn.addEventListener('click', () => {
++      document.execCommand(command, false, null);
++      editor.focus();
++    });
++  }
++}
++
++// Formatting buttons (Align left, List, etc.)
++const alignLeftBtn = document.querySelector('[title="Align Left"]');
++if (alignLeftBtn) {
++  alignLeftBtn.addEventListener('click', () => {
++    document.execCommand('justifyLeft', false, null);
++    editor.focus();
++  });
++}
++
++const listBtn = document.querySelector('[title="Bullet List"]');
++if (listBtn) {
++  listBtn.addEventListener('click', () => {
++    document.execCommand('insertUnorderedList', false, null);
++    editor.focus();
++  });
++}
++
++const undoBtn = document.querySelector('[title="Undo"]');
++if (undoBtn) {
++  undoBtn.addEventListener('click', () => {
++    document.execCommand('undo', false, null);
++    editor.focus();
++  });
++}
++
++const redoBtn = document.querySelector('[title="Redo"]');
++if (redoBtn) {
++  redoBtn.addEventListener('click', () => {
++    document.execCommand('redo', false, null);
++    editor.focus();
++  });
++}
++
++// Font Size Logic (1 to 7 corresponds to standard HTML sizes)
++// 1=10px, 2=13px, 3=16px (12pt), 4=18px, 5=24px, 6=32px, 7=48px
++// We map the display number to internal execCommand sizes.
++
++let currentHtmlSize = 3; // Corresponds to typical 12pt/16px visually 
++
++function updateFontSize() {
++  // Map internal sizes to arbitrary display values (just for UI)
++  const displayMap = { 1: 8, 2: 10, 3: 12, 4: 16, 5: 20, 6: 28, 7: 36 };
++  fsDisplay.textContent = displayMap[currentHtmlSize];
++  document.execCommand("fontSize", false, currentHtmlSize);
++  editor.focus();
++}
++
++btnFsInc.addEventListener('click', () => {
++  if (currentHtmlSize < 7) {
++    currentHtmlSize++;
++    updateFontSize();
++  }
++});
++
++btnFsDec.addEventListener('click', () => {
++  if (currentHtmlSize > 1) {
++    currentHtmlSize--;
++    updateFontSize();
++  }
++});
++
++// Copy button
++const btnCopy = document.getElementById('btn-copy');
++if (btnCopy) {
++  btnCopy.addEventListener('click', () => {
++    navigator.clipboard.writeText(editor.innerText || editor.textContent);
++    
++    // Quick tooltip feedback
++    const originalText = btnCopy.innerHTML;
++    btnCopy.innerHTML = `<span class="material-symbols-outlined">check</span> Copied`;
++    setTimeout(() => {
++      btnCopy.innerHTML = originalText;
++    }, 2000);
++  });
++}
++
++function renderWordTable() {
++  if (!wordTableBody) return;
++  if (customWords.length === 0) {
++    wordTableBody.innerHTML = `<tr><td colspan="2" class="empty-data">No data available</td></tr>`;
++    return;
++  }
++  
++  wordTableBody.innerHTML = '';
++  customWords.forEach(({ pattern, word }) => {
++    const row = document.createElement('tr');
++    row.innerHTML = `
++      <td>${word}</td>
++      <td>${pattern}</td>
++    `;
++    wordTableBody.appendChild(row);
++  });
++}
++
++// Initial render
++renderWordTable();
++
++if (btnAddWordTarget) {
++  btnAddWordTarget.addEventListener('click', () => {
++    addWordModal.classList.remove('hidden');
++    if (inputWord) inputWord.focus();
++  });
++}
++
++if (btnCloseModal) {
++  btnCloseModal.addEventListener('click', () => {
++    addWordModal.classList.add('hidden');
++  });
++}
++
++// Close modal when clicking outside
++if (addWordModal) {
++  addWordModal.addEventListener('click', (e) => {
++    if (e.target === addWordModal) {
++      addWordModal.classList.add('hidden');
++    }
++  });
++}
++
++if (btnSubmitWord) {
++  btnSubmitWord.addEventListener('click', () => {
++    const pattern = inputPattern.value.trim().toLowerCase(); // Ensure pattern is lowercase for easy matching
++    const word = inputWord.value.trim();
++
++    if (pattern && word) {
++      // Add to array
++      customWords.unshift({ pattern, word });
++      // Save to local storage
++      localStorage.setItem('manglish_custom_words', JSON.stringify(customWords));
++      
++      renderWordTable();
++      
++      // Clear inputs
++      inputPattern.value = '';
++      inputWord.value = '';
++      inputPattern.focus();
++    }
++  });
++}
++
++// -------- More Menu & Suggestions Logic --------
++
++if (btnMore && moreMenu) {
++  btnMore.addEventListener('click', (e) => {
++    e.stopPropagation();
++    moreMenu.classList.toggle('hidden');
++  });
++
++  document.addEventListener('click', (e) => {
++    if (!btnMore.contains(e.target) && !moreMenu.contains(e.target)) {
++      moreMenu.classList.add('hidden');
++    }
++  });
++}
++
++// Global flag for suggestion mode
++let isSuggestionsEnabled = false;
++if (toggleSuggestions) {
++  toggleSuggestions.addEventListener('change', (e) => {
++    isSuggestionsEnabled = e.target.checked;
++    if (!isSuggestionsEnabled) {
++      if (suggestionsBox) suggestionsBox.classList.add('hidden');
++    }
++  });
++}
++
++// Render Suggestions
++function showSuggestionsForWord(word, customMatches, apiMatches) {
++  if (!suggestionsBox) return;
++
++  if (!word) {
++    suggestionsBox.classList.add('hidden');
++    return;
++  }
++  
++  // Combine unique suggestions
++  const allSuggestions = [...new Set([...customMatches, ...apiMatches])].slice(0, 5); // Max 5
++  
++  if (allSuggestions.length === 0) {
++    suggestionsBox.classList.add('hidden');
++    return;
++  }
++  
++  suggestionsBox.innerHTML = '';
++  allSuggestions.forEach((sug, index) => {
++    const div = document.createElement('div');
++    div.className = `suggestion-item ${index === 0 ? 'selected' : ''}`;
++    div.textContent = sug;
++    
++    // Clicking a suggestion triggers manual replacement
++    div.addEventListener('mousedown', (e) => {
++      e.preventDefault(); // Prevents the editor from losing selection/focus
++      handleTransliteration(' ', sug);
++      suggestionsBox.classList.add('hidden');
++    });
++    
++    suggestionsBox.appendChild(div);
++  });
++  
++  // Position the box under the cursor
++  const selection = window.getSelection();
++  if (selection.rangeCount > 0) {
++    const range = selection.getRangeAt(0);
++    const rect = range.getBoundingClientRect();
++    
++    // Position directly under the typed word
++    suggestionsBox.style.top = (rect.bottom + 8) + 'px';
++    suggestionsBox.style.left = rect.left + 'px';
++  } else {
++    // Fallback if no selection range
++    suggestionsBox.style.bottom = '100px';
++    suggestionsBox.style.left = '50%';
++    suggestionsBox.style.transform = 'translateX(-50%)';
++  }
++  
++  suggestionsBox.classList.remove('hidden');
++}
++
++
++// Open external link for Varnam logo
++const logoVarnam = document.getElementById('logo-varnam');
++if (logoVarnam) {
++  logoVarnam.addEventListener('click', () => {
++    const { shell } = require('electron');
++    shell.openExternal('https://varnamproject.com/');
++  });
++}
++
++// Language Selector Logic
++if (btnLangSelector && langMenu) {
++  btnLangSelector.addEventListener('click', (e) => {
++    e.stopPropagation();
++    langMenu.classList.toggle('hidden');
++  });
++
++  document.addEventListener('click', (e) => {
++    if (!btnLangSelector.contains(e.target) && !langMenu.contains(e.target)) {
++      langMenu.classList.add('hidden');
++    }
++  });
++}
++
++langItems.forEach(item => {
++  item.addEventListener('click', () => {
++    const langCode = item.getAttribute('data-lang');
++    
++    currentLang = langCode;
++    localStorage.setItem('last_selected_lang', langCode);
++    
++    // Switch to Indian language mode automatically
++    isEnglishMode = false;
++    localStorage.setItem('last_is_english_mode', false);
++    
++    syncLanguageUI();
++    langMenu.classList.add('hidden');
++    editor.focus();
++  });
++});
++
++// Window Controls
++const btnMin = document.getElementById('win-min');
++const btnClose = document.getElementById('win-close');
++
++if (btnMin) {
++  btnMin.addEventListener('click', () => {
++    ipcRenderer.send('minimize-window');
++  });
++}
++
++if (btnClose) {
++  btnClose.addEventListener('click', () => {
++    ipcRenderer.send('close-window');
++  });
++}
++
++// -------- AI Dashboard Logic --------
++function renderAiWordTable() {
++  const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
++  const entries = [];
++
++  for (const pattern in learned) {
++    for (const word in learned[pattern]) {
++      entries.push({
++        pattern,
++        word,
++        frequency: learned[pattern][word]
++      });
++    }
++  }
++
++  // Sort by frequency descending
++  entries.sort((a, b) => b.frequency - a.frequency);
++
++  if (entries.length === 0) {
++    aiWordTableBody.innerHTML = `<tr><td colspan="3" class="empty-data">No learned data available yet. Start typing to train the AI!</td></tr>`;
++    return;
++  }
++
++  aiWordTableBody.innerHTML = '';
++  entries.forEach(entry => {
++    const row = document.createElement('tr');
++    row.innerHTML = `
++      <td>${entry.pattern}</td>
++      <td>${entry.word}</td>
++      <td>${entry.frequency}</td>
++    `;
++    aiWordTableBody.appendChild(row);
++  });
++}
++
++if (btnAiDashboard) {
++  btnAiDashboard.addEventListener('click', () => {
++    renderAiWordTable();
++    aiDashboardModal.classList.remove('hidden');
++  });
++}
++
++if (btnCloseAiModal) {
++  btnCloseAiModal.addEventListener('click', () => {
++    aiDashboardModal.classList.add('hidden');
++  });
++}
++
++if (aiDashboardModal) {
++  aiDashboardModal.addEventListener('click', (e) => {
++    if (e.target === aiDashboardModal) {
++      aiDashboardModal.classList.add('hidden');
++    }
++  });
++}
++
++if (btnClearAiMemory) {
++  btnClearAiMemory.addEventListener('click', () => {
++    if (confirm('Are you sure you want to clear all learned AI memory? This cannot be undone.')) {
++      localStorage.removeItem('manglish_ai_learning');
++      renderAiWordTable();
++      alert('AI Memory cleared successfully.');
++    }
++  });
++}
++
++// -------- File Management Logic --------
++const NOTES_DIR = path.join(__dirname, 'notes');
++if (!fs.existsSync(NOTES_DIR)) {
++  fs.mkdirSync(NOTES_DIR);
++}
++
++let activeFilePath = localStorage.getItem('last_active_file') || null;
++
++if (btnNewFileMain && newFileMenu) {
++  btnNewFileMain.addEventListener('click', (e) => {
++    e.stopPropagation();
++    newFileMenu.classList.toggle('hidden');
++  });
++
++  document.addEventListener('click', () => {
++    newFileMenu.classList.add('hidden');
++  });
++}
++
++function formatDate(date) {
++  const d = new Date(date);
++  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
++}
++
++function getFileCategory(mtime) {
++  const now = new Date();
++  const date = new Date(mtime);
++  
++  const diffTime = Math.abs(now - date);
++  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
++  
++  if (date.toDateString() === now.toDateString()) return 'today';
++  
++  const yesterday = new Date(now);
++  yesterday.setDate(now.getDate() - 1);
++  if (date.toDateString() === yesterday.toDateString()) return 'yesterday';
++  
++  return 'earlier';
++}
++
++function renderFileList() {
++  if (!listToday) return;
++
++  listToday.innerHTML = '';
++  listYesterday.innerHTML = '';
++  listEarlier.innerHTML = '';
++
++  const files = fs.readdirSync(NOTES_DIR).filter(f => f.endsWith('.txt'));
++  
++  const sortedFiles = files.map(filename => {
++    const stats = fs.statSync(path.join(NOTES_DIR, filename));
++    return { filename, mtime: stats.mtime };
++  }).sort((a, b) => b.mtime - a.mtime);
++
++  sortedFiles.forEach(file => {
++    const li = document.createElement('li');
++    li.className = 'file-item';
++    if (path.join(NOTES_DIR, file.filename) === activeFilePath) {
++      li.classList.add('active');
++    }
++    const nameSpan = document.createElement('span');
++    nameSpan.className = 'file-name';
++    nameSpan.textContent = file.filename.replace('.txt', '');
++    li.appendChild(nameSpan);
++    li.title = file.filename;
++    
++    if (path.join(NOTES_DIR, file.filename) === activeFilePath) {
++      const editIcon = document.createElement('span');
++      editIcon.className = 'material-symbols-outlined rename-icon';
++      editIcon.textContent = 'edit';
++      editIcon.addEventListener('click', (e) => {
++        e.stopPropagation();
++        renameFile(file.filename);
++      });
++      li.appendChild(editIcon);
++    }
++    
++    li.addEventListener('click', () => {
++      loadNote(path.join(NOTES_DIR, file.filename));
++    });
++
++    const category = getFileCategory(file.mtime);
++    if (category === 'today') listToday.appendChild(li);
++    else if (category === 'yesterday') listYesterday.appendChild(li);
++    else listEarlier.appendChild(li);
++  });
++
++  // Dynamic Visibility Check
++  document.getElementById('section-today').classList.toggle('hidden', listToday.children.length === 0);
++  document.getElementById('section-yesterday').classList.toggle('hidden', listYesterday.children.length === 0);
++  document.getElementById('section-earlier').classList.toggle('hidden', listEarlier.children.length === 0);
++}
++
++function renameFile(oldName) {
++  const renameModal = document.getElementById('rename-modal');
++  const renameInput = document.getElementById('rename-input');
++  const btnConfirm = document.getElementById('btn-confirm-rename');
++  const btnCancel = document.getElementById('btn-cancel-rename');
++  
++  if (!renameModal || !renameInput) return;
++
++  const oldBaseName = oldName.replace('.txt', '');
++  renameInput.value = oldBaseName;
++  renameModal.classList.remove('hidden');
++  renameInput.focus();
++  renameInput.select();
++
++  const handleRename = () => {
++    const newBaseName = renameInput.value.trim();
++    if (!newBaseName || newBaseName === oldBaseName) {
++      closeModal();
++      return;
++    }
++
++    // Clean filename of invalid characters
++    const cleanName = newBaseName.replace(/[<>:"/\\|?*]/g, '');
++    if (!cleanName) {
++      alert('Invalid file name.');
++      return;
++    }
++
++    const oldPath = path.join(NOTES_DIR, oldName);
++    const newName = cleanName + '.txt';
++    const newPath = path.join(NOTES_DIR, newName);
++
++    if (fs.existsSync(newPath)) {
++      alert('A file with this name already exists.');
++      return;
++    }
++
++    try {
++      fs.renameSync(oldPath, newPath);
++      activeFilePath = newPath;
++      localStorage.setItem('last_active_file', newPath);
++      closeModal();
++      renderFileList();
++      editor.focus();
++    } catch (e) {
++      console.error('Rename error:', e);
++      alert('Failed to rename file.');
++    }
++  };
++
++  const closeModal = () => {
++    renameModal.classList.add('hidden');
++    btnConfirm.removeEventListener('click', handleRename);
++    btnCancel.removeEventListener('click', closeModal);
++    window.removeEventListener('keydown', handleKey);
++  };
++
++  const handleKey = (e) => {
++    if (e.key === 'Enter') handleRename();
++    if (e.key === 'Escape') closeModal();
++  };
++
++  btnConfirm.addEventListener('click', handleRename);
++  btnCancel.addEventListener('click', closeModal);
++  window.addEventListener('keydown', handleKey);
++}
++
++function loadNote(filePath) {
++  if (!fs.existsSync(filePath)) return;
++  activeFilePath = filePath;
++  localStorage.setItem('last_active_file', filePath);
++  const content = fs.readFileSync(filePath, 'utf-8');
++  editor.innerText = content;
++  renderFileList();
++  editor.focus();
++}
++
++function createNewNote() {
++  const createModal = document.getElementById('create-modal');
++  const createInput = document.getElementById('create-input');
++  const btnConfirm = document.getElementById('btn-confirm-create');
++  const btnCancel = document.getElementById('btn-cancel-create');
++  
++  if (!createModal || !createInput) return;
++
++  createInput.value = '';
++  createModal.classList.remove('hidden');
++  createInput.focus();
++
++  const handleCreate = () => {
++    const fileName = createInput.value.trim();
++    if (!fileName) {
++      closeModal();
++      return;
++    }
++
++    const cleanName = fileName.replace(/[<>:"/\\|?*]/g, '');
++    const filePath = path.join(NOTES_DIR, cleanName + '.txt');
++    
++    if (fs.existsSync(filePath)) {
++      alert('A file with this name already exists.');
++      return;
++    }
++
++    try {
++      fs.writeFileSync(filePath, '');
++      activeFilePath = filePath;
++      localStorage.setItem('last_active_file', filePath);
++      editor.innerText = '';
++      closeModal();
++      renderFileList();
++      editor.focus();
++    } catch (e) {
++      console.error('Create error:', e);
++      alert('Failed to create file.');
++    }
++  };
++
++  const closeModal = () => {
++    createModal.classList.add('hidden');
++    btnConfirm.removeEventListener('click', handleCreate);
++    btnCancel.removeEventListener('click', closeModal);
++    window.removeEventListener('keydown', handleKey);
++  };
++
++  const handleKey = (e) => {
++    if (e.key === 'Enter') handleCreate();
++    if (e.key === 'Escape') closeModal();
++  };
++
++  btnConfirm.addEventListener('click', handleCreate);
++  btnCancel.addEventListener('click', closeModal);
++  window.addEventListener('keydown', handleKey);
++}
++
++async function selectFile() {
++  console.log('Renderer: Requesting open-file-dialog...');
++  try {
++    // Check if ipcRenderer is actually available
++    if (typeof ipcRenderer === 'undefined') {
++      throw new Error('ipcRenderer is not defined');
++    }
++    
++    const filePaths = await ipcRenderer.invoke('open-file-dialog');
++    console.log('Renderer: File selected:', filePaths);
++    
++    if (filePaths && filePaths.length > 0) {
++      loadNote(filePaths[0]);
++    }
++  } catch (e) {
++    console.error('Renderer: Select file error details:', e);
++    alert('Could not open file picker. Error: ' + e.message);
++  }
++}
++
++function autoSave() {
++  if (activeFilePath && fs.existsSync(activeFilePath)) {
++    const content = editor.innerText || editor.textContent;
++    fs.writeFileSync(activeFilePath, content);
++  }
++}
++
++if (btnCreateNew) {
++  btnCreateNew.addEventListener('click', () => {
++    newFileMenu.classList.add('hidden');
++    createNewNote();
++  });
++}
++
++if (btnSelectFile) {
++  btnSelectFile.addEventListener('click', () => {
++    newFileMenu.classList.add('hidden');
++    selectFile();
++  });
++}
++
++// Auto-save on input
++editor.addEventListener('input', () => {
++  autoSave();
++});
++
++// -------- Correction / Drawing Modal Logic --------
++
++let ctx = drawingCanvas.getContext('2d');
++let drawing = false;
++let isEraser = false;
++let strokes = []; // Stores the paths for the handwriting API
++
++function initCanvas() {
++  const malayalamWord = lastTranslitData.malayalam || '';
++  const charCount = malayalamWord.length;
++  
++  // Calculate dynamic width: min 300, max 600, ~70px per char
++  const dynamicWidth = Math.min(600, Math.max(300, charCount * 70));
++  
++  // Set container width
++  const container = drawingCanvas.parentElement;
++  if (container) {
++    container.style.width = dynamicWidth + 'px';
++  }
++
++  // Set internal resolution for the canvas
++  drawingCanvas.width = dynamicWidth;
++  drawingCanvas.height = 300; 
++  
++  ctx.lineJoin = 'round';
++  ctx.lineCap = 'round';
++  
++  updateBrushStyle();
++  clearCanvas();
++}
++
++function updateBrushStyle() {
++  if (isEraser) {
++    ctx.lineWidth = 20;
++    ctx.globalCompositeOperation = 'destination-out';
++    if (btnEraser) btnEraser.classList.add('active-tool');
++    drawingCanvas.classList.add('eraser-tool');
++    drawingCanvas.classList.remove('pen-tool');
++  } else {
++    ctx.strokeStyle = '#58a6ff'; // Accent color
++    ctx.lineWidth = 4;
++    ctx.globalCompositeOperation = 'source-over';
++    if (btnEraser) btnEraser.classList.remove('active-tool');
++    drawingCanvas.classList.add('pen-tool');
++    drawingCanvas.classList.remove('eraser-tool');
++  }
++}
++
++if (btnEraser) {
++  btnEraser.addEventListener('click', () => {
++    isEraser = !isEraser;
++    updateBrushStyle();
++    logToBox(`Eraser mode: ${isEraser ? 'ON' : 'OFF'}`);
++  });
++}
++
++function clearCanvas() {
++  ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
++  
++  if (lastTranslitData && lastTranslitData.malayalam) {
++    // Save current state
++    const currentComp = ctx.globalCompositeOperation;
++    const currentStyle = ctx.fillStyle;
++    
++    // Draw ghost text
++    ctx.globalCompositeOperation = 'source-over';
++    ctx.font = '64px "Noto Sans Malayalam", "Inter", sans-serif';
++    ctx.fillStyle = '#58a6ff';
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(lastTranslitData.malayalam, drawingCanvas.width / 2, drawingCanvas.height / 2);
++    
++    // Restore state
++    ctx.globalCompositeOperation = currentComp;
++    ctx.fillStyle = currentStyle;
++  }
++  
++  strokes = [];
++}
++
++if (btnIsCorrect) {
++  btnIsCorrect.addEventListener('click', () => {
++    displayEnglishWord.textContent = lastTranslitData.english;
++    isCorrectModal.classList.remove('hidden');
++    initCanvas();
++  });
++}
++
++if (btnCloseCorrectModal) {
++  btnCloseCorrectModal.addEventListener('click', () => {
++    isCorrectModal.classList.add('hidden');
++  });
++}
++
++if (btnClearCanvas) {
++  btnClearCanvas.addEventListener('click', clearCanvas);
++}
++
++// Drawing Logic
++drawingCanvas.addEventListener('mousedown', (e) => {
++  drawing = true;
++  const rect = drawingCanvas.getBoundingClientRect();
++  const scaleX = drawingCanvas.width / rect.width;
++  const scaleY = drawingCanvas.height / rect.height;
++  
++  // Offset by hotspot (0, 20) in visual pixels
++  const x = (e.clientX - rect.left) * scaleX;
++  const y = (e.clientY - rect.top - 20) * scaleY;
++  
++  ctx.beginPath();
++  ctx.moveTo(x, y);
++  strokes.push([[x], [y], [Date.now()]]); 
++});
++
++drawingCanvas.addEventListener('mousemove', (e) => {
++  if (!drawing) return;
++  const rect = drawingCanvas.getBoundingClientRect();
++  const scaleX = drawingCanvas.width / rect.width;
++  const scaleY = drawingCanvas.height / rect.height;
++  
++  // Offset by hotspot (0, 20) in visual pixels
++  const x = (e.clientX - rect.left) * scaleX;
++  const y = (e.clientY - rect.top - 20) * scaleY;
++  
++  ctx.lineTo(x, y);
++  ctx.stroke();
++  
++  if (!isEraser) {
++    const currentStroke = strokes[strokes.length - 1];
++    currentStroke[0].push(x);
++    currentStroke[1].push(y);
++    currentStroke[2].push(Date.now());
++  }
++});
++
++window.addEventListener('mouseup', () => {
++  drawing = false;
++});
++
++// Recognition API (using Google Web Handwriting API)
++async function recognizeHandwriting() {
++  if (strokes.length === 0) return null;
++
++  const handwritingITC = languages[currentLang].googleCode.replace('-und', '-handwrit');
++
++  const payload = {
++    options: "enable_pre_space",
++    requests: [{
++      writing_guide: {
++        writing_area_width: drawingCanvas.width,
++        writing_area_height: drawingCanvas.height
++      },
++      ink: strokes,
++      language: currentLang
++    }]
++  };
++
++  try {
++    const url = `https://inputtools.google.com/request?itc=${handwritingITC}&app=autofill`;
++    const response = await fetch(url, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify(payload)
++    });
++
++    const data = await response.json();
++    console.log(`Handwriting recognition response:`, data);
++    if (data[0] === 'SUCCESS' && data[1] && data[1][0] && data[1][0][1] && data[1][0][1].length > 0) {
++      return data[1][0][1]; // Return the full list of candidates
++    }
++  } catch (e) {
++    console.error("Handwriting recognition failed:", e);
++  }
++  return null;
++}
++
++if (btnVerifyUpdate) {
++  btnVerifyUpdate.addEventListener('click', async () => {
++    // If we already have a selection, this button acts as "Update"
++    if (selectedCorrection) {
++      updateWithCorrection(selectedCorrection);
++      isCorrectModal.classList.add('hidden');
++      return;
++    }
++
++    btnVerifyUpdate.disabled = true;
++    const originalText = btnVerifyUpdate.innerHTML;
++    btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">sync</span> Verifying...`;
++    
++    // Clear previous results
++    resultsList.innerHTML = '';
++    correctionResults.classList.add('hidden');
++    selectedCorrection = null;
++
++    const candidates = await recognizeHandwriting();
++    
++    if (candidates && candidates.length > 0) {
++      correctionResults.classList.remove('hidden');
++      candidates.forEach((word, index) => {
++        const chip = document.createElement('div');
++        chip.className = 'result-chip';
++        chip.textContent = word;
++        chip.addEventListener('click', () => {
++          // Highlight selection
++          document.querySelectorAll('.result-chip').forEach(c => c.classList.remove('selected'));
++          chip.classList.add('selected');
++          
++          selectedCorrection = word;
++          btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Update Editor`;
++          btnVerifyUpdate.classList.add('pulse-animation'); // Optional visual cue
++        });
++        resultsList.appendChild(chip);
++      });
++      
++      // Auto-select first one as default but require "Update" click
++      // (Or let user pick)
++      btnVerifyUpdate.innerHTML = `<span class="material-symbols-outlined">touch_app</span> Pick a Word`;
++
++    } else {
++      alert("No handwriting detected or recognition failed. Please try again.");
++    }
++    
++    btnVerifyUpdate.disabled = false;
++  });
++}
++
++function updateWithCorrection(newWord) {
++  const selection = window.getSelection();
++  if (!selection.rangeCount) return;
++  
++  const range = selection.getRangeAt(0);
++  const node = range.startContainer;
++  
++  if (node.nodeType === Node.TEXT_NODE) {
++    const text = node.textContent;
++    const lastWord = lastTranslitData.malayalam;
++    
++    // Find last index of the word before current cursor
++    // More robust matching: search globally in the editor if current node fails
++    let lastIdx = text.lastIndexOf(lastWord, selection.focusOffset);
++    if (lastIdx === -1) {
++       // Try without offset constraint if fails
++       lastIdx = text.lastIndexOf(lastWord);
++    }
++
++    if (lastIdx !== -1) {
++      console.log(`Replacing "${lastWord}" with "${newWord}" at index ${lastIdx}`);
++      const newText = text.substring(0, lastIdx) + newWord + text.substring(lastIdx + lastWord.length);
++      node.textContent = newText;
++      
++      // Reset cursor position
++      const newRange = document.createRange();
++      newRange.setStart(node, lastIdx + newWord.length);
++      newRange.setEnd(node, lastIdx + newWord.length);
++      selection.removeAllRanges();
++      selection.addRange(newRange);
++    } else {
++      console.error(`Could not find "${lastWord}" in current node text.`);
++      // Fallback: Try to find in the entire editor if possible
++      if (editor.innerText.includes(lastWord)) {
++        console.log("Found word in editor full text, but not in current node. Correcting...");
++        editor.innerText = editor.innerText.replace(new RegExp(lastWord + "$"), newWord);
++      }
++    }
++  }
++
++  // Persist the correction
++  const pattern = lastTranslitData.english.toLowerCase();
++  
++  // Update Custom Words
++  customWords.unshift({ pattern, word: newWord });
++  localStorage.setItem('manglish_custom_words', JSON.stringify(customWords));
++  renderWordTable();
++
++  // Update AI Learning
++  const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
++  if (!learned[pattern]) learned[pattern] = {};
++  learned[pattern][newWord] = (learned[pattern][newWord] || 0) + 10; 
++  localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
++
++  btnIsCorrect.classList.add('hidden');
++}
++
++// Initial Load
++if (activeFilePath && fs.existsSync(activeFilePath)) {
++  loadNote(activeFilePath);
++} else {
++  renderFileList();
++}
