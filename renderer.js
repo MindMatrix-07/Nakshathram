@@ -40,6 +40,17 @@ if (btnClearLogs) {
 
 console.log('Nakshathram Editor Initialized');
 
+// Window Controls (Minimize & Close)
+const winMin = document.getElementById('win-min');
+const winClose = document.getElementById('win-close');
+
+if (winMin) {
+  winMin.addEventListener('click', () => ipcRenderer.send('minimize-window'));
+}
+if (winClose) {
+  winClose.addEventListener('click', () => ipcRenderer.send('close-window'));
+}
+
 // Toolbar & Menu Elements
 const btnMore = document.getElementById('btn-more');
 const moreMenu = document.getElementById('more-menu');
@@ -105,25 +116,14 @@ const btnPluginsTarget = document.getElementById('btn-plugins');
 const pluginsModal = document.getElementById('plugins-modal');
 const btnClosePluginsModal = document.getElementById('btn-close-plugins-modal');
 
-// Spotify Plugin Elements
-const spotifySetupPhase = document.getElementById('spotify-setup-phase');
-const spotifyLoginPhase = document.getElementById('spotify-login-phase');
-const spotifyPlayerPhase = document.getElementById('spotify-player-phase');
-const spotifyClientIdInput = document.getElementById('spotify-client-id-input');
-const btnSaveSpotifyKey = document.getElementById('btn-save-spotify-key');
-const btnEditSpotifyKey = document.getElementById('btn-edit-spotify-key');
-const btnSpotifyLogin = document.getElementById('btn-spotify-login');
-const btnSpotifyLogout = document.getElementById('btn-spotify-logout');
-const spotifySearchInput = document.getElementById('spotify-search-input');
-const btnSpotifySearch = document.getElementById('btn-spotify-search');
-const spotifySearchResults = document.getElementById('spotify-search-results');
-const spotifyEmbedContainer = document.getElementById('spotify-embed-container');
-const linkSpotifyDev = document.getElementById('link-spotify-dev');
-const spotifyWidget = document.getElementById('spotify-widget');
+// Plugin Host Elements
+const pluginSidebarHost = document.getElementById('plugin-sidebar-host');
+const pluginModalHost = document.getElementById('plugin-modal-host');
+const installedPluginCards = document.getElementById('installed-plugin-cards');
+const pluginsEmptyState = document.getElementById('plugins-empty-state');
+const btnAddPlugin = document.getElementById('btn-add-plugin');
 
-// Main View Elements
-const cardSpotify = document.getElementById('card-spotify');
-const cardGDrive = document.getElementById('card-gdrive');
+// Editor Spotify Player (still used by spotify plugin)
 const editorSpotifyPlayer = document.getElementById('editor-spotify-player');
 
 let currentLang = localStorage.getItem('last_selected_lang') || 'ml'; // Active Indian language
@@ -1795,41 +1795,149 @@ document.addEventListener('click', (e) => {
 });
 
 
-// -------- Plugins and Spotify Integrations Logic --------
 
-const SpotifyWebApi = require('spotify-web-api-node');
+// -------- Plugin Loader Engine --------
 
-let spotifyApi = new SpotifyWebApi();
-let spotifyAccessToken = null;
-let spotifyRefreshToken = localStorage.getItem('spotify_refresh_token');
-let spotifyClientId = localStorage.getItem('spotify_client_id');
+// Expose active file to plugins via global
+Object.defineProperty(window, '__nakshathramActiveFile', {
+  get: () => activeFilePath
+});
 
-function updateSpotifyPluginUI() {
-  if (!spotifySetupPhase || !spotifyLoginPhase || !spotifyPlayerPhase) return;
+// Installed plugins metadata persisted in localStorage
+let installedPlugins = JSON.parse(localStorage.getItem('nakshathram_plugins') || '[]');
 
-  if (!spotifyClientId) {
-    // Phase 1: Setup
-    spotifySetupPhase.classList.remove('hidden');
-    spotifyLoginPhase.classList.add('hidden');
-    spotifyPlayerPhase.classList.add('hidden');
-  } else if (!spotifyAccessToken && !spotifyRefreshToken) {
-    // Phase 2: Login
-    spotifySetupPhase.classList.add('hidden');
-    spotifyLoginPhase.classList.remove('hidden');
-    spotifyPlayerPhase.classList.add('hidden');
+function saveInstalledPlugins() {
+  localStorage.setItem('nakshathram_plugins', JSON.stringify(installedPlugins));
+}
+
+function updatePluginsModalUI() {
+  if (!installedPluginCards) return;
+  installedPluginCards.innerHTML = '';
+  const hasPlugins = installedPlugins.length > 0;
+  if (pluginsEmptyState) pluginsEmptyState.style.display = hasPlugins ? 'none' : 'block';
+
+  installedPlugins.forEach((plugin, index) => {
+    const card = document.createElement('div');
+    card.className = 'plugin-card';
+    card.innerHTML = `
+      <div class="card-icon" style="color: ${plugin.color || '#aaa'};">
+        <span class="material-symbols-outlined">${plugin.icon || 'extension'}</span>
+      </div>
+      <div class="card-info">
+        <h4>${plugin.name}</h4>
+        <p>${plugin.description || ''}</p>
+      </div>
+      <button class="plugin-remove-btn" title="Remove plugin" style="
+        background: none; border: none; cursor: pointer; color: var(--text-muted);
+        padding: 4px; border-radius: 50%; display: flex; align-items: center;
+        transition: color 0.2s, background 0.2s;
+      " data-index="${index}">
+        <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+      </button>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.plugin-remove-btn')) return;
+      togglePluginUI(plugin);
+    });
+
+    const removeBtn = card.querySelector('.plugin-remove-btn');
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Remove "${plugin.name}" plugin?`)) removePlugin(index);
+    });
+    removeBtn.addEventListener('mouseenter', () => { removeBtn.style.color = '#ff6b6b'; removeBtn.style.background = 'rgba(255,107,107,0.1)'; });
+    removeBtn.addEventListener('mouseleave', () => { removeBtn.style.color = ''; removeBtn.style.background = ''; });
+
+    installedPluginCards.appendChild(card);
+  });
+}
+
+function togglePluginUI(plugin) {
+  if (plugin.sidebar) {
+    const host = document.getElementById(`plugin-host-${plugin.id}`);
+    if (host) host.classList.toggle('hidden');
   } else {
-    // Phase 3: Player
-    spotifySetupPhase.classList.add('hidden');
-    spotifyLoginPhase.classList.add('hidden');
-    spotifyPlayerPhase.classList.remove('hidden');
-    
-    // Attempt Token Refresh if we have a refresh token but no active access token 
-    // (A real app would detect expiration, here we just do it eagerly on load if needed)
-    if (!spotifyAccessToken && spotifyRefreshToken) {
-       refreshSpotifyToken();
-    }
+    const host = document.getElementById(`plugin-modal-${plugin.id}`);
+    if (host) host.classList.toggle('hidden');
   }
 }
+
+function removePlugin(index) {
+  const plugin = installedPlugins[index];
+  installedPlugins.splice(index, 1);
+  saveInstalledPlugins();
+  updatePluginsModalUI();
+  const sidebarHost = document.getElementById(`plugin-host-${plugin.id}`);
+  if (sidebarHost) sidebarHost.remove();
+  const modalHost = document.getElementById(`plugin-modal-${plugin.id}`);
+  if (modalHost) modalHost.remove();
+  console.log(`Plugin "${plugin.name}" removed.`);
+}
+
+async function loadPlugin(filePath) {
+  try {
+    const raw = await ipcRenderer.invoke('read-plugin-file', filePath);
+    if (!raw) throw new Error('Could not read plugin file');
+
+    const plugin = JSON.parse(raw);
+    if (!plugin.id || !plugin.name || !plugin.html || !plugin.script) {
+      throw new Error('Invalid .star plugin format: missing required fields');
+    }
+
+    if (installedPlugins.find(p => p.id === plugin.id)) {
+      alert(`"${plugin.name}" is already installed.`);
+      return;
+    }
+
+    // Inject HTML
+    const hostEl = document.createElement('div');
+    if (plugin.sidebar) {
+      hostEl.id = `plugin-host-${plugin.id}`;
+      hostEl.className = 'plugin-sidebar-section';
+      hostEl.innerHTML = plugin.html;
+      if (pluginSidebarHost) pluginSidebarHost.appendChild(hostEl);
+    } else {
+      hostEl.id = `plugin-modal-${plugin.id}`;
+      hostEl.style.cssText = 'margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;';
+      hostEl.innerHTML = plugin.html;
+      if (pluginModalHost) pluginModalHost.appendChild(hostEl);
+    }
+
+    // Expose context to plugin
+    window.pluginContext = { ipcRenderer, localStorage, editor, path };
+
+    // Execute plugin script
+    const scriptFn = new Function(plugin.script);
+    scriptFn();
+
+    installedPlugins.push({
+      id: plugin.id,
+      name: plugin.name,
+      icon: plugin.icon,
+      color: plugin.color,
+      description: plugin.description,
+      sidebar: !!plugin.sidebar,
+      filePath
+    });
+    saveInstalledPlugins();
+    updatePluginsModalUI();
+    console.log(`Plugin "${plugin.name}" loaded successfully.`);
+  } catch (err) {
+    console.error('Failed to load plugin:', err);
+    alert('Failed to load plugin: ' + err.message);
+  }
+}
+
+async function reloadInstalledPlugins() {
+  const toReload = [...installedPlugins];
+  installedPlugins = [];
+  for (const savedPlugin of toReload) {
+    await loadPlugin(savedPlugin.filePath);
+  }
+}
+
+// -------- Plugins Modal Wiring --------
 
 if (btnPluginsTarget && pluginsModal) {
   btnPluginsTarget.addEventListener('click', () => {
@@ -1843,587 +1951,30 @@ if (btnClosePluginsModal) {
   });
 }
 
-// Close plugins modal when clicking outside
 if (pluginsModal) {
   pluginsModal.addEventListener('click', (e) => {
-    if (e.target === pluginsModal) {
-      pluginsModal.classList.add('hidden');
+    if (e.target === pluginsModal) pluginsModal.classList.add('hidden');
+  });
+}
+
+if (btnAddPlugin) {
+  btnAddPlugin.addEventListener('click', async () => {
+    const filePaths = await ipcRenderer.invoke('open-plugin-dialog');
+    if (filePaths && filePaths.length > 0) {
+      await loadPlugin(filePaths[0]);
     }
   });
 }
 
-if (cardGDrive) {
-  cardGDrive.addEventListener('click', (e) => {
-    e.stopPropagation();
-    console.log('GDrive card clicked');
-    if (gdriveWidget) {
-      gdriveWidget.classList.toggle('hidden');
-      console.log('GDrive widget visibility toggled:', !gdriveWidget.classList.contains('hidden'));
-    }
-    updateGDrivePluginUI();
-  });
-}
+// -------- Initial Startup --------
 
-if (cardSpotify) {
-  cardSpotify.addEventListener('click', (e) => {
-    e.stopPropagation();
-    console.log('Spotify card clicked');
-    if (spotifyWidget) {
-      spotifyWidget.classList.remove('hidden');
-      console.log('Spotify widget shown in sidebar');
-    }
-    updateSpotifyPluginUI();
-  });
-}
+updatePluginsModalUI();
+reloadInstalledPlugins();
 
-// Ensure the sidebar widget is visible if already logged in / enabled
-if (spotifyAccessToken && spotifyWidget) {
-  spotifyWidget.classList.remove('hidden');
-}
-
-// Open Spotify Dev Dashboard
-if (linkSpotifyDev) {
-  linkSpotifyDev.addEventListener('click', (e) => {
-    e.preventDefault();
-    require('electron').shell.openExternal('https://developer.spotify.com/dashboard/');
-  });
-}
-
-// Save BYOK Client ID
-if (btnSaveSpotifyKey) {
-  btnSaveSpotifyKey.addEventListener('click', () => {
-    const key = spotifyClientIdInput.value.trim();
-    if (key) {
-      spotifyClientId = key;
-      localStorage.setItem('spotify_client_id', key);
-      updateSpotifyPluginUI();
-    } else {
-      alert("Please enter a valid Client ID.");
-    }
-  });
-}
-
-// Edit Client ID
-if (btnEditSpotifyKey) {
-  btnEditSpotifyKey.addEventListener('click', () => {
-    // Clear tokens because Client ID changed
-    spotifyAccessToken = null;
-    spotifyRefreshToken = null;
-    localStorage.removeItem('spotify_refresh_token');
-    
-    spotifyClientId = null;
-    localStorage.removeItem('spotify_client_id');
-    spotifyClientIdInput.value = '';
-    
-    updateSpotifyPluginUI();
-  });
-}
-
-// --- Spotify PKCE PKCE OAuth Flow Functions ---
-function generateRandomString(length) {
-  let text = '';
-  let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
-
-async function generateCodeChallenge(codeVerifier) {
-  const data = new TextEncoder().encode(codeVerifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-if (btnSpotifyLogin) {
-  btnSpotifyLogin.addEventListener('click', async () => {
-    if (!spotifyClientId) return;
-
-    const codeVerifier = generateRandomString(128);
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-    const redirectUri = 'http://127.0.0.1:8888/callback';
-    const scope = 'streaming user-read-email user-read-private user-library-read user-read-playback-state user-modify-playback-state user-top-read';
-    
-    const authUrl = new URL("https://accounts.spotify.com/authorize");
-    const params = {
-      response_type: 'code',
-      client_id: spotifyClientId,
-      scope: scope,
-      code_challenge_method: 'S256',
-      code_challenge: codeChallenge,
-      redirect_uri: redirectUri,
-    };
-    authUrl.search = new URLSearchParams(params).toString();
-
-    try {
-      btnSpotifyLogin.textContent = "Waiting for Login...";
-      btnSpotifyLogin.disabled = true;
-      
-      const code = await ipcRenderer.invoke('spotify-login', authUrl.toString());
-      
-      // Exchange code for token
-      const body = new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri,
-        client_id: spotifyClientId,
-        code_verifier: codeVerifier
-      });
-
-      const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: body
-      });
-
-      if (!response.ok) {
-        throw new Error('Token exchange failed');
-      }
-
-      const data = await response.json();
-      spotifyAccessToken = data.access_token;
-      spotifyRefreshToken = data.refresh_token;
-      
-      localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
-      spotifyApi.setAccessToken(spotifyAccessToken);
-      
-      updateSpotifyPluginUI();
-      
-    } catch (error) {
-      console.error('Spotify Login Error:', error);
-      alert('Login failed: ' + error.message);
-    } finally {
-      btnSpotifyLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Login to Spotify';
-      btnSpotifyLogin.disabled = false;
-    }
-  });
-}
-
-async function refreshSpotifyToken() {
-  if (!spotifyClientId || !spotifyRefreshToken) return;
-  try {
-     const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: spotifyRefreshToken,
-        client_id: spotifyClientId
-     });
-
-     const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: body
-     });
-     
-     if (!response.ok) {
-        throw new Error("Refresh failed. User must log in again.");
-     }
-     
-     const data = await response.json();
-     spotifyAccessToken = data.access_token;
-     
-     // Sometimes a new refresh token is returned
-     if (data.refresh_token) {
-        spotifyRefreshToken = data.refresh_token;
-        localStorage.setItem('spotify_refresh_token', spotifyRefreshToken);
-     }
-     
-     spotifyApi.setAccessToken(spotifyAccessToken);
-  } catch (error) {
-     console.error('Spotify token refresh error', error);
-     logoutSpotify(); // Token is likely revoked or invalid
-  }
-}
-
-async function logoutSpotify() {
-  spotifyAccessToken = null;
-  spotifyRefreshToken = null;
-  localStorage.removeItem('spotify_refresh_token');
-  spotifyApi.resetAccessToken();
-  spotifyApi.resetRefreshToken();
-  spotifySearchResults.innerHTML = '';
-  spotifySearchResults.classList.add('hidden');
-  spotifyEmbedContainer.innerHTML = '';
-  
-  // Clear Electron Session Cookies
-  await ipcRenderer.invoke('spotify-logout');
-  
-  updateSpotifyPluginUI();
-}
-
-if (btnSpotifyLogout) {
-  btnSpotifyLogout.addEventListener('click', logoutSpotify);
-}
-
-// Search and Play logic
-if (btnSpotifySearch) {
-  btnSpotifySearch.addEventListener('click', async () => {
-     if (!spotifyAccessToken) return;
-     const query = spotifySearchInput.value.trim();
-     if (!query) return;
-
-     try {
-       const data = await spotifyApi.searchTracks(query, { limit: 5 });
-       const tracks = data.body.tracks.items;
-       
-       spotifySearchResults.innerHTML = '';
-       
-       if (tracks.length === 0) {
-          spotifySearchResults.innerHTML = '<div style="padding: 10px; color: grey;">No results found.</div>';
-       } else {
-          tracks.forEach(track => {
-             const div = document.createElement('div');
-             div.className = 'spotify-song-item';
-             
-             const imgUrl = track.album.images.length > 0 ? track.album.images[track.album.images.length - 1].url : 'https://placehold.co/40';
-             const artistName = track.artists[0] ? track.artists[0].name : 'Unknown Artist';
-             
-             div.innerHTML = `
-                <img src="${imgUrl}" class="spotify-song-img" alt="Cover">
-                <div class="spotify-song-info">
-                   <span class="spotify-song-title">${track.name}</span>
-                   <span class="spotify-song-artist">${artistName}</span>
-                </div>
-             `;
-             
-             div.addEventListener('click', () => {
-                 spotifySearchResults.classList.add('hidden');
-                 
-                 // Show the docked player in the editor
-                 if (editorSpotifyPlayer) {
-                   editorSpotifyPlayer.classList.remove('hidden');
-                   editorSpotifyPlayer.innerHTML = `
-                     <iframe 
-                       src="https://open.spotify.com/embed/track/${track.id}?utm_source=generator" 
-                       width="100%" 
-                       height="100%" 
-                       frameBorder="0" 
-                       allowfullscreen="" 
-                       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                       loading="lazy">
-                     </iframe>
-                   `;
-                 }
-              });
-             
-             spotifySearchResults.appendChild(div);
-          });
-       }
-       
-       spotifySearchResults.classList.remove('hidden');
-
-     } catch (err) {
-       console.error('Search error', err);
-       if (err.statusCode === 401) {
-          // Attempt refresh and retry once ideally, but for now just clear
-          logoutSpotify();
-          alert("Session expired. Please log in again.");
-       } else {
-          alert('Failed to search tracks.');
-       }
-     }
-  });
-
-  }
-
-// -------- Google Drive Integration Logic --------
-
-// [USER ACTION REQUIRED] Set this to your deployed Vercel API URL
-const VERCEL_CONFIG_URL = 'https://nakshathram.vercel.app/api/gdrive-config';
-
-let GDRIVE_CLIENT_ID = null;
-let GDRIVE_CLIENT_SECRET = null;
-let GDRIVE_REDIRECT_URI = 'http://localhost';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
-
-let gdriveAccessToken = null;
-let gdriveRefreshToken = localStorage.getItem('gdrive_refresh_token');
-
-// ELEMENTS
-const gdriveWidget = document.getElementById('gdrive-sidebar-widget');
-const btnGDriveLogin = document.getElementById('btn-gdrive-login');
-const btnGDriveLogout = document.getElementById('btn-gdrive-logout');
-const gdriveSetupPhase = document.getElementById('gdrive-setup-phase');
-const gdriveActivePhase = document.getElementById('gdrive-active-phase');
-const gdriveSyncStatus = document.getElementById('gdrive-sync-status');
-const gdriveUserEmail = document.getElementById('gdrive-user-email');
-
-async function fetchGDriveConfig() {
-  if (GDRIVE_CLIENT_ID && GDRIVE_CLIENT_SECRET) return true;
-  
-  try {
-    const response = await fetch(VERCEL_CONFIG_URL);
-    if (!response.ok) throw new Error('Failed to fetch config from Vercel');
-    const data = await response.json();
-    GDRIVE_CLIENT_ID = data.clientId;
-    GDRIVE_CLIENT_SECRET = data.clientSecret;
-    GDRIVE_REDIRECT_URI = data.redirectUri || 'http://localhost';
-    
-    if (!GDRIVE_CLIENT_ID || !GDRIVE_CLIENT_SECRET) {
-      console.error('Vercel returned empty GDrive credentials. Check your Environment Variables.');
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('Error fetching Google Drive config:', err);
-    return false;
-  }
-}
-
-function updateGDrivePluginUI() {
-  if (!gdriveWidget) return;
-
-  if (!gdriveAccessToken && !gdriveRefreshToken) {
-    gdriveSetupPhase.classList.remove('hidden');
-    gdriveActivePhase.classList.add('hidden');
-    gdriveSyncStatus.textContent = 'Offline';
-    gdriveSyncStatus.style.background = 'rgba(255, 255, 255, 0.1)';
-  } else {
-    gdriveSetupPhase.classList.add('hidden');
-    gdriveActivePhase.classList.remove('hidden');
-    gdriveSyncStatus.textContent = 'Active';
-    gdriveSyncStatus.style.background = 'rgba(66, 133, 244, 0.2)';
-    
-    // Eagerly refresh token if we only have the refresh token
-    if (!gdriveAccessToken && gdriveRefreshToken) {
-      refreshGDriveToken();
-    }
-  }
-}
-
-async function refreshGDriveToken() {
-  if (!gdriveRefreshToken) return;
-  
-  const configLoaded = await fetchGDriveConfig();
-  if (!configLoaded) return;
-  
-  try {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: GDRIVE_CLIENT_ID,
-        client_secret: GDRIVE_CLIENT_SECRET,
-        refresh_token: gdriveRefreshToken,
-        grant_type: 'refresh_token'
-      })
-    });
-
-    if (!response.ok) throw new Error('Refresh failed');
-    const data = await response.json();
-    gdriveAccessToken = data.access_token;
-    console.log('Google Drive Token Refreshed');
-  } catch (err) {
-    console.error('Google token refresh error:', err);
-    logoutGDrive();
-  }
-}
-
-async function logoutGDrive() {
-  gdriveAccessToken = null;
-  gdriveRefreshToken = null;
-  gdriveFolderId = null;
-  gdriveFileIdCache = {};
-  localStorage.removeItem('gdrive_refresh_token');
-  localStorage.removeItem('gdrive_folder_id');
-  await ipcRenderer.invoke('google-logout');
-  updateGDrivePluginUI();
-}
-
-// Google Drive listeners moved to consolidated block above
-
-if (btnGDriveLogin) {
-  btnGDriveLogin.addEventListener('click', async () => {
-    btnGDriveLogin.disabled = true;
-    btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">sync</span> Loading...';
-
-    const configLoaded = await fetchGDriveConfig();
-    if (!configLoaded) {
-      alert('Could not reach Vercel API. Make sure VERCEL_CONFIG_URL is correct in renderer.js');
-      btnGDriveLogin.disabled = false;
-      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Sign in with Google';
-      return;
-    }
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GDRIVE_CLIENT_ID}&redirect_uri=${GDRIVE_REDIRECT_URI}&response_type=code&scope=${encodeURIComponent(GDRIVE_SCOPE)}&access_type=offline&prompt=consent`;
-    
-    try {
-      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">sync</span> Waiting...';
-      
-      const code = await ipcRenderer.invoke('google-login', authUrl);
-      
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code: code,
-          client_id: GDRIVE_CLIENT_ID,
-          client_secret: GDRIVE_CLIENT_SECRET,
-          redirect_uri: GDRIVE_REDIRECT_URI,
-          grant_type: 'authorization_code'
-        })
-      });
-
-      if (!response.ok) throw new Error('Token exchange failed');
-      const data = await response.json();
-      
-      gdriveAccessToken = data.access_token;
-      gdriveRefreshToken = data.refresh_token;
-      if (gdriveRefreshToken) localStorage.setItem('gdrive_refresh_token', gdriveRefreshToken);
-      
-      updateGDrivePluginUI();
-    } catch (err) {
-      console.error('Google Login Error:', err);
-      alert('Login failed. Check console for details.');
-    } finally {
-      btnGDriveLogin.disabled = false;
-      btnGDriveLogin.innerHTML = '<span class="material-symbols-outlined">login</span> Sign in with Google';
-    }
-  });
-}
-
-if (btnGDriveLogout) {
-  btnGDriveLogout.addEventListener('click', logoutGDrive);
-}
-
-// LIVE SYNC LOGIC
-let gdriveFolderId = localStorage.getItem('gdrive_folder_id');
-let gdriveFileIdCache = {}; // Cache filename -> fileId
-let isSyncInProgress = false;
-let lastSyncedContent = "";
-
-async function getOrCreateGDriveFolder() {
-  if (gdriveFolderId) return gdriveFolderId;
-
-  try {
-    console.log('Searching for Nakshathram Notes folder...');
-    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='Nakshathram Notes' and mimeType='application/vnd.google-apps.folder' and trashed=false`, {
-      headers: { Authorization: `Bearer ${gdriveAccessToken}` }
-    });
-    const searchData = await searchResponse.json();
-    const existingFolder = searchData.files && searchData.files[0];
-
-    if (existingFolder) {
-      gdriveFolderId = existingFolder.id;
-      localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-      return gdriveFolderId;
-    }
-
-    console.log('Creating Nakshathram Notes folder...');
-    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${gdriveAccessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: 'Nakshathram Notes',
-        mimeType: 'application/vnd.google-apps.folder'
-      })
-    });
-    
-    if (!createResponse.ok) throw new Error('Folder creation failed');
-    const createData = await createResponse.json();
-    gdriveFolderId = createData.id;
-    localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-    return gdriveFolderId;
-  } catch (err) {
-    console.error('GDrive folder error:', err);
-    return null;
-  }
-}
-
-async function syncToGDrive() {
-  if (!gdriveAccessToken || !activeFilePath || isSyncInProgress) return;
-
-  const content = (editor.innerText || editor.textContent).trim();
-  if (content === lastSyncedContent) return;
-
-  isSyncInProgress = true;
-  const fileName = path.basename(activeFilePath);
-
-  try {
-    const folderId = await getOrCreateGDriveFolder();
-    if (!folderId) return;
-
-    let targetFileId = gdriveFileIdCache[fileName];
-
-    if (!targetFileId) {
-      // Search for the file in the specific folder
-      const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false`, {
-        headers: { Authorization: `Bearer ${gdriveAccessToken}` }
-      });
-      const searchData = await searchResponse.json();
-      const files = searchData.files || [];
-      if (files.length > 0) {
-        targetFileId = files[0].id;
-        gdriveFileIdCache[fileName] = targetFileId;
-      }
-    }
-
-    if (targetFileId) {
-      // Update existing file
-      const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${targetFileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${gdriveAccessToken}`,
-          'Content-Type': 'text/plain'
-        },
-        body: content
-      });
-      if (updateRes.ok) lastSyncedContent = content;
-    } else {
-      // Create new file
-      const metadata = { name: fileName, mimeType: 'text/plain', parents: [folderId] };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', new Blob([content], { type: 'text/plain' }));
-
-      const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${gdriveAccessToken}` },
-        body: form
-      });
-      
-      if (createRes.ok) {
-        const createData = await createRes.json();
-        gdriveFileIdCache[fileName] = createData.id;
-        lastSyncedContent = content;
-      }
-    }
-  } catch (err) {
-    console.error('GDrive sync failed:', err);
-  } finally {
-    isSyncInProgress = false;
-  }
-}
-
-// 3-Second Interval Sync
-setInterval(() => {
-  if (gdriveAccessToken && activeFilePath) {
-    syncToGDrive();
-  }
-}, 3000);
-
-// Initial UI Check
-updateGDrivePluginUI();
-
-// Initial Load
 if (activeFilePath && fs.existsSync(activeFilePath)) {
   loadNote(activeFilePath);
 } else {
   renderFileList();
 }
 
-// Initial Spotify UI check
-updateSpotifyPluginUI();
-// Spotify stays hidden on start unless enabled by user in Plugins menu
-if (spotifyWidget) {
-  spotifyWidget.classList.add('hidden');
-}
+

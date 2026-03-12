@@ -57,6 +57,33 @@ app.whenReady().then(() => {
     }
   });
 
+  // Handle Plugin File Selection (.star files)
+  ipcMain.handle('open-plugin-dialog', async () => {
+    console.log('Main Process: Received open-plugin-dialog request');
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: [{ name: 'Nakshathram Plugin Files', extensions: ['star'] }]
+      });
+      return result.canceled ? [] : result.filePaths;
+    } catch (e) {
+      console.error('Plugin dialog error:', e);
+      return [];
+    }
+  });
+
+  // Handle Reading a Plugin File
+  const fs = require('fs');
+  ipcMain.handle('read-plugin-file', async (event, filePath) => {
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return content;
+    } catch (e) {
+      console.error('Error reading plugin file:', e);
+      return null;
+    }
+  });
+
   // Handle Note Saving to Windows Explorer
   ipcMain.handle('save-file-dialog', async (event, defaultName) => {
     console.log('Main Process: Received save-file-dialog request');
