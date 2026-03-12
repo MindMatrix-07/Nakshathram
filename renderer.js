@@ -2230,15 +2230,59 @@ if (btnGDriveLogout) {
 }
 
 // LIVE SYNC LOGIC
+let gdriveFolderId = localStorage.getItem('gdrive_folder_id');
+
+async function getOrCreateGDriveFolder() {
+  if (gdriveFolderId) return gdriveFolderId;
+
+  try {
+    // 1. Search for Nakshathram Notes folder
+    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='Nakshathram Notes' and mimeType='application/vnd.google-apps.folder' and trashed=false`, {
+      headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+    });
+    const searchData = await searchResponse.json();
+    const existingFolder = searchData.files && searchData.files[0];
+
+    if (existingFolder) {
+      gdriveFolderId = existingFolder.id;
+      localStorage.setItem('gdrive_folder_id', gdriveFolderId);
+      return gdriveFolderId;
+    }
+
+    // 2. Create if not found
+    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${gdriveAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: 'Nakshathram Notes',
+        mimeType: 'application/vnd.google-apps.folder'
+      })
+    });
+    const createData = await createResponse.json();
+    gdriveFolderId = createData.id;
+    localStorage.setItem('gdrive_folder_id', gdriveFolderId);
+    return gdriveFolderId;
+  } catch (err) {
+    console.error('Error getting/creating GDrive folder:', err);
+    return null;
+  }
+}
+
 async function syncToGDrive() {
   if (!gdriveAccessToken || !activeFilePath) return;
+
+  const folderId = await getOrCreateGDriveFolder();
+  if (!folderId) return;
 
   const fileName = path.basename(activeFilePath);
   const content = editor.innerText || editor.textContent;
 
   try {
-    // 1. Check if file already exists in Drive (simple search by name)
-    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and trashed=false`, {
+    // 1. Check if file already exists in that specific folder
+    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false`, {
       headers: { Authorization: `Bearer ${gdriveAccessToken}` }
     });
     const searchData = await searchResponse.json();
@@ -2254,12 +2298,13 @@ async function syncToGDrive() {
         },
         body: content
       });
-      console.log(`Synced update for ${fileName} to Google Drive`);
+      console.log(`Synced update for ${fileName} to Nakshathram Notes`);
     } else {
-      // Create new file
+      // Create new file inside the folder
       const metadata = {
         name: fileName,
-        mimeType: 'text/plain'
+        mimeType: 'text/plain',
+        parents: [folderId]
       };
       
       const form = new FormData();
@@ -2271,11 +2316,10 @@ async function syncToGDrive() {
         headers: { Authorization: `Bearer ${gdriveAccessToken}` },
         body: form
       });
-      console.log(`Synced new file ${fileName} to Google Drive`);
+      console.log(`Synced new file ${fileName} to Nakshathram Notes`);
     }
   } catch (err) {
     console.error('Sync to Google Drive failed:', err);
-    // If 401, refresh token and retry once?
   }
 }
 
