@@ -123,6 +123,7 @@ const spotifyWidget = document.getElementById('spotify-widget');
 
 // Main View Elements
 const cardSpotify = document.getElementById('card-spotify');
+const cardGDrive = document.getElementById('card-gdrive');
 const editorSpotifyPlayer = document.getElementById('editor-spotify-player');
 
 let currentLang = localStorage.getItem('last_selected_lang') || 'ml'; // Active Indian language
@@ -824,7 +825,7 @@ langItems.forEach(item => {
 
 // Window Controls
 const btnMin = document.getElementById('win-min');
-const btnClose = document.getElementById('win-close');
+const btnClose = document.getElementById('btn-close');
 
 if (btnMin) {
   btnMin.addEventListener('click', () => {
@@ -995,16 +996,30 @@ function renderFileList() {
     nameSpan.textContent = file.filename.replace('.txt', '');
     li.appendChild(nameSpan);
     li.title = file.filename;
-    
+
     if (path.join(NOTES_DIR, file.filename) === activeFilePath) {
+      // Edit Icon
       const editIcon = document.createElement('span');
       editIcon.className = 'material-symbols-outlined rename-icon';
       editIcon.textContent = 'edit';
+      editIcon.title = 'Rename file';
       editIcon.addEventListener('click', (e) => {
         e.stopPropagation();
         renameFile(file.filename);
       });
       li.appendChild(editIcon);
+
+      // Delete Icon
+      const deleteIcon = document.createElement('span');
+      deleteIcon.className = 'material-symbols-outlined delete-icon';
+      deleteIcon.textContent = 'delete';
+      deleteIcon.title = 'Delete file';
+      deleteIcon.style.marginLeft = '4px'; // Tiny gap
+      deleteIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteNote(file.filename);
+      });
+      li.appendChild(deleteIcon);
     }
     
     li.addEventListener('click', () => {
@@ -1088,6 +1103,30 @@ function renameFile(oldName) {
   btnConfirm.addEventListener('click', handleRename);
   btnCancel.addEventListener('click', closeModal);
   window.addEventListener('keydown', handleKey);
+}
+
+function deleteNote(filename) {
+  if (confirm(`Are you sure you want to delete "${filename.replace('.txt', '')}"? This cannot be undone.`)) {
+    const filePath = path.join(NOTES_DIR, filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted file: ${filePath}`);
+        
+        // If the deleted file was the active one, clear editor
+        if (filePath === activeFilePath) {
+          activeFilePath = null;
+          localStorage.removeItem('last_active_file');
+          editor.innerText = '';
+        }
+        
+        renderFileList();
+      }
+    } catch (e) {
+      console.error('Delete error:', e);
+      alert('Failed to delete file.');
+    }
+  }
 }
 
 function loadNote(filePath) {
@@ -1792,19 +1831,47 @@ function updateSpotifyPluginUI() {
   }
 }
 
-if (btnPluginsTarget && spotifyWidget) {
+if (btnPluginsTarget && pluginsModal) {
   btnPluginsTarget.addEventListener('click', () => {
-    // If modal is already handled or if we just want to toggle the sidebar directly:
-    // User said "spotify search remain in sidebar if plugin is enabled"
-    // So let's show the modal first to choose, then stay in sidebar.
     pluginsModal.classList.remove('hidden');
   });
 }
 
-if (cardSpotify && pluginsModal) {
-  cardSpotify.addEventListener('click', () => {
+if (btnClosePluginsModal) {
+  btnClosePluginsModal.addEventListener('click', () => {
     pluginsModal.classList.add('hidden');
-    spotifyWidget.classList.remove('hidden'); // Show sidebar widget
+  });
+}
+
+// Close plugins modal when clicking outside
+if (pluginsModal) {
+  pluginsModal.addEventListener('click', (e) => {
+    if (e.target === pluginsModal) {
+      pluginsModal.classList.add('hidden');
+    }
+  });
+}
+
+if (cardGDrive) {
+  cardGDrive.addEventListener('click', (e) => {
+    e.stopPropagation();
+    console.log('GDrive card clicked');
+    if (gdriveWidget) {
+      gdriveWidget.classList.toggle('hidden');
+      console.log('GDrive widget visibility toggled:', !gdriveWidget.classList.contains('hidden'));
+    }
+    updateGDrivePluginUI();
+  });
+}
+
+if (cardSpotify) {
+  cardSpotify.addEventListener('click', (e) => {
+    e.stopPropagation();
+    console.log('Spotify card clicked');
+    if (spotifyWidget) {
+      spotifyWidget.classList.remove('hidden');
+      console.log('Spotify widget shown in sidebar');
+    }
     updateSpotifyPluginUI();
   });
 }
@@ -2079,7 +2146,6 @@ let gdriveAccessToken = null;
 let gdriveRefreshToken = localStorage.getItem('gdrive_refresh_token');
 
 // ELEMENTS
-const cardGDrive = document.getElementById('card-gdrive');
 const gdriveWidget = document.getElementById('gdrive-sidebar-widget');
 const btnGDriveLogin = document.getElementById('btn-gdrive-login');
 const btnGDriveLogout = document.getElementById('btn-gdrive-logout');
@@ -2162,18 +2228,15 @@ async function refreshGDriveToken() {
 async function logoutGDrive() {
   gdriveAccessToken = null;
   gdriveRefreshToken = null;
+  gdriveFolderId = null;
+  gdriveFileIdCache = {};
   localStorage.removeItem('gdrive_refresh_token');
+  localStorage.removeItem('gdrive_folder_id');
   await ipcRenderer.invoke('google-logout');
   updateGDrivePluginUI();
 }
 
-if (cardGDrive) {
-  cardGDrive.addEventListener('click', () => {
-    if (pluginsModal) pluginsModal.classList.add('hidden');
-    if (gdriveWidget) gdriveWidget.classList.remove('hidden');
-    updateGDrivePluginUI();
-  });
-}
+// Google Drive listeners moved to consolidated block above
 
 if (btnGDriveLogin) {
   btnGDriveLogin.addEventListener('click', async () => {
@@ -2231,6 +2294,7 @@ if (btnGDriveLogout) {
 
 // LIVE SYNC LOGIC
 let gdriveFolderId = localStorage.getItem('gdrive_folder_id');
+let gdriveFileIdCache = {}; // Cache filename -> fileId
 let isSyncInProgress = false;
 let lastSyncedContent = "";
 
@@ -2248,11 +2312,10 @@ async function getOrCreateGDriveFolder() {
     if (existingFolder) {
       gdriveFolderId = existingFolder.id;
       localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-      console.log('Found existing folder:', gdriveFolderId);
       return gdriveFolderId;
     }
 
-    console.log('Folder not found, creating Nakshathram Notes folder...');
+    console.log('Creating Nakshathram Notes folder...');
     const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
       headers: {
@@ -2265,18 +2328,13 @@ async function getOrCreateGDriveFolder() {
       })
     });
     
-    if (!createResponse.ok) {
-      const errData = await createResponse.json();
-      throw new Error('Folder creation failed: ' + JSON.stringify(errData));
-    }
-
+    if (!createResponse.ok) throw new Error('Folder creation failed');
     const createData = await createResponse.json();
     gdriveFolderId = createData.id;
     localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-    console.log('Created new folder:', gdriveFolderId);
     return gdriveFolderId;
   } catch (err) {
-    console.error('Error getting/creating GDrive folder:', err);
+    console.error('GDrive folder error:', err);
     return null;
   }
 }
@@ -2284,36 +2342,34 @@ async function getOrCreateGDriveFolder() {
 async function syncToGDrive() {
   if (!gdriveAccessToken || !activeFilePath || isSyncInProgress) return;
 
-  const content = editor.innerText || editor.textContent;
-  
-  // Skip if content hasn't changed since last successful sync
+  const content = (editor.innerText || editor.textContent).trim();
   if (content === lastSyncedContent) return;
 
   isSyncInProgress = true;
+  const fileName = path.basename(activeFilePath);
 
   try {
     const folderId = await getOrCreateGDriveFolder();
-    if (!folderId) {
-      isSyncInProgress = false;
-      return;
+    if (!folderId) return;
+
+    let targetFileId = gdriveFileIdCache[fileName];
+
+    if (!targetFileId) {
+      // Search for the file in the specific folder
+      const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false`, {
+        headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+      });
+      const searchData = await searchResponse.json();
+      const files = searchData.files || [];
+      if (files.length > 0) {
+        targetFileId = files[0].id;
+        gdriveFileIdCache[fileName] = targetFileId;
+      }
     }
 
-    const fileName = path.basename(activeFilePath);
-
-    // 1. Check if file already exists in that specific folder
-    const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false`, {
-      headers: { Authorization: `Bearer ${gdriveAccessToken}` }
-    });
-    const searchData = await searchResponse.json();
-    const files = searchData.files || [];
-    
-    // If multiple exist (user reported 4), we update the first one and potentially delete others? 
-    // For now, let's just update the most recent one.
-    const existingFile = files[0];
-
-    if (existingFile) {
+    if (targetFileId) {
       // Update existing file
-      const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+      const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${targetFileId}?uploadType=media`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${gdriveAccessToken}`,
@@ -2321,18 +2377,10 @@ async function syncToGDrive() {
         },
         body: content
       });
-      if (updateRes.ok) {
-        lastSyncedContent = content;
-        console.log(`Synced update for ${fileName} to Nakshathram Notes`);
-      }
+      if (updateRes.ok) lastSyncedContent = content;
     } else {
-      // Create new file inside the folder
-      const metadata = {
-        name: fileName,
-        mimeType: 'text/plain',
-        parents: [folderId]
-      };
-      
+      // Create new file
+      const metadata = { name: fileName, mimeType: 'text/plain', parents: [folderId] };
       const form = new FormData();
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', new Blob([content], { type: 'text/plain' }));
@@ -2344,12 +2392,13 @@ async function syncToGDrive() {
       });
       
       if (createRes.ok) {
+        const createData = await createRes.json();
+        gdriveFileIdCache[fileName] = createData.id;
         lastSyncedContent = content;
-        console.log(`Synced new file ${fileName} to Nakshathram Notes`);
       }
     }
   } catch (err) {
-    console.error('Sync to Google Drive failed:', err);
+    console.error('GDrive sync failed:', err);
   } finally {
     isSyncInProgress = false;
   }

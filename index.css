@@ -203,7 +203,7 @@ body {
   pointer-events: none; /* Let the click pass to the LI */
 }
 
-.rename-icon {
+.rename-icon, .delete-icon {
   font-size: 1.1rem !important;
   color: var(--text-secondary);
   opacity: 0.5;
@@ -216,7 +216,7 @@ body {
   border-radius: 4px;
 }
 
-.file-item.active .rename-icon {
+.file-item.active .rename-icon, .file-item.active .delete-icon {
   opacity: 0.8;
 }
 
@@ -224,6 +224,12 @@ body {
   opacity: 1 !important;
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--accent-color) !important;
+}
+
+.delete-icon:hover {
+  opacity: 1 !important;
+  background-color: rgba(255, 71, 87, 0.1); /* Subtle red background */
+  color: #ff4757 !important; /* Tomato red */
 }
 
 .sidebar-footer {
@@ -330,7 +336,7 @@ body {
   gap: 8px;
 }
 
-.dropdown-menu.hidden {
+.hidden {
   display: none !important;
 }
 
@@ -1245,6 +1251,8 @@ body {
 /* Plugins Modal Specific */
 .plugins-modal-content {
   max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .plugins-body {

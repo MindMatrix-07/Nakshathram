@@ -92,7 +92,7 @@
         </ul>
       </div>
 
-      <div class="sidebar-spotify-widget" id="spotify-widget">
+      <div class="sidebar-spotify-widget hidden" id="spotify-widget">
         <!-- Spotify Plugin Section moved from modal -->
         <div class="plugin-section" id="spotify-plugin">
           <div class="plugin-header">
@@ -502,37 +502,34 @@
               <p>Sync your notes live to your cloud storage.</p>
             </div>
           </div>
-          <!-- More plugins can be added here -->
         </div>
-      </div>
 
-      <!-- Hidden Google Drive Sidebar UI -->
-      <div id="gdrive-sidebar-widget" class="sidebar-gdrive-widget hidden">
-        <div class="plugin-section">
-          <div class="plugin-header">
-            <h4>Google Drive</h4>
-            <span class="plugin-badge" id="gdrive-sync-status">Offline</span>
-          </div>
-          
-          <div id="gdrive-setup-phase" class="plugin-phase">
-            <p class="plugin-desc">Connect your account to enable live sync.</p>
-            <button class="sidebar-gdrive-btn" id="btn-gdrive-login">
-              <span class="material-symbols-outlined">login</span>
-              Sign in with Google
-            </button>
-          </div>
-
-          <div id="gdrive-active-phase" class="plugin-phase hidden">
-            <p class="plugin-desc">Live sync is active.</p>
-            <div class="sync-info">
-              <span class="material-symbols-outlined">check_circle</span>
-              <span id="gdrive-user-email">Account Connected</span>
+        <!-- Google Drive Interaction Area (Inside Modal) -->
+        <div id="gdrive-sidebar-widget" class="sidebar-gdrive-widget hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Google Drive Status</h4>
+              <span class="plugin-badge" id="gdrive-sync-status">Offline</span>
             </div>
-            <button class="sidebar-link-btn" id="btn-gdrive-logout">Logout</button>
+            
+            <div id="gdrive-setup-phase" class="plugin-phase">
+              <p class="plugin-desc">Connect your account to enable live sync.</p>
+              <button class="sidebar-gdrive-btn" id="btn-gdrive-login">
+                <span class="material-symbols-outlined">login</span>
+                Sign in with Google
+              </button>
+            </div>
+
+            <div id="gdrive-active-phase" class="plugin-phase hidden">
+              <p class="plugin-desc">Live sync is active.</p>
+              <div class="sync-info">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span id="gdrive-user-email">Account Connected</span>
+              </div>
+              <button class="sidebar-link-btn" id="btn-gdrive-logout">Logout</button>
+            </div>
           </div>
         </div>
-      </div>
-
       </div>
     </div>
   </div>
