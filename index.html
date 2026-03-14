@@ -657,9 +657,13 @@
                 <span class="material-symbols-outlined">logout</span>
                 Sign Out
               </button>
+              <button class="btn-secondary danger-btn" id="btn-delete-account">
+                <span class="material-symbols-outlined">person_remove</span>
+                Delete Account
+              </button>
             </div>
             <p class="helper-text">
-              Password is mandatory. After each successful sign in, Nakshathram saves a credentials PDF to your Downloads folder.
+              Password is mandatory. After each successful sign in, Nakshathram saves a credentials PDF to your Downloads folder. Deleting the account only disables access and leaves database typing data unchanged.
             </p>
           </div>
         </div>
@@ -687,29 +691,33 @@
 
         <div class="plugin-section auth-gateway-panel">
           <div class="plugin-header">
-            <h4 id="auth-gateway-title">Sign in to continue</h4>
-            <span class="plugin-badge" id="auth-gateway-badge">SIGN IN</span>
+            <h4 id="auth-gateway-title">Sign in or create an account</h4>
+            <span class="plugin-badge" id="auth-gateway-badge">LOGIN FIRST</span>
           </div>
 
           <div class="dashboard-meta-list auth-gateway-meta">
             <div class="settings-id-card">
-              <span class="settings-label" id="auth-gateway-name-label">Account</span>
-              <strong id="auth-gateway-user-name">Local account</strong>
+              <span class="settings-label" id="auth-gateway-name-label">Sign in</span>
+              <strong id="auth-gateway-user-name">Use your 8-digit user ID and password</strong>
             </div>
             <div class="settings-id-card">
-              <span class="settings-label">User ID</span>
-              <strong id="auth-gateway-user-id">Pending</strong>
+              <span class="settings-label">Create account</span>
+              <strong id="auth-gateway-user-id">Get a new 8-digit user ID and credentials PDF</strong>
             </div>
           </div>
 
           <p class="helper-text" id="auth-gateway-status">
-            Use the button below to continue.
+            Start with sign in if you already have an account. Choose create account if this is your first time.
           </p>
 
           <div class="offline-tool-actions">
             <button class="modal-btn primary" id="btn-auth-primary">
               <span class="material-symbols-outlined" id="auth-gateway-icon">lock_open</span>
               <span id="auth-gateway-button-text">Sign In</span>
+            </button>
+            <button class="modal-btn secondary" id="btn-auth-create-account">
+              <span class="material-symbols-outlined">person_add</span>
+              Create Account
             </button>
           </div>
         </div>
@@ -760,19 +768,21 @@
   <div id="unlock-modal" class="modal-overlay hidden">
     <div class="modal-content auth-modal-content">
       <div class="modal-header">
-        <h3>UNLOCK APP</h3>
+        <h3>SIGN IN</h3>
       </div>
       <div class="modal-body onboarding-body">
         <p class="plugin-desc">
-          Enter your password to open Nakshathram. A fresh credentials PDF will be saved automatically after successful sign in.
+          Enter your 8-digit user ID and password to open Nakshathram. A fresh credentials PDF will be saved automatically after successful sign in.
         </p>
+        <label class="settings-label" for="unlock-user-id">User ID</label>
+        <input type="text" id="unlock-user-id" class="modal-input" placeholder="Enter 8-digit user ID" inputmode="numeric">
         <label class="settings-label" for="unlock-password">Password</label>
         <input type="password" id="unlock-password" class="modal-input" placeholder="Enter password">
-        <p class="helper-text" id="unlock-status">Password is required to continue.</p>
+        <p class="helper-text" id="unlock-status">User ID and password are required to continue.</p>
         <div class="modal-actions">
           <button class="modal-btn primary" id="btn-unlock-app">
             <span class="material-symbols-outlined">lock_open</span>
-            Unlock
+            Sign In
           </button>
         </div>
       </div>

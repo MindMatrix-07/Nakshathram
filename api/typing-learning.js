@@ -76,6 +76,13 @@ function createDefaultCloudConfig() {
   };
 }
 
+function clearPersistedAuthState(storage) {
+  if (!storage || typeof storage.removeItem !== 'function') return;
+
+  storage.removeItem(STORAGE_KEYS.userProfile);
+  storage.removeItem(STORAGE_KEYS.preferences);
+}
+
 function createEmptyLearningStore() {
   return {
     version: 2,
@@ -581,8 +588,6 @@ async function syncProfile(config, profile, preferences) {
   const payload = {
     user_id: profile.userId,
     display_name: profile.displayName,
-    password_hash: profile.passwordHash || null,
-    password_enabled: Boolean(profile.passwordEnabled),
     collection_consent: preferences.collectionConsent === true,
     local_learning_enabled: preferences.localLearningEnabled === true,
     cloud_sync_enabled: preferences.cloudSyncEnabled === true,
@@ -632,7 +637,114 @@ async function syncProfile(config, profile, preferences) {
   }
 }
 
-async function syncTypingEvents(config, events) {
+async function registerAccount(config, payload) {
+  const backendUrl = sanitizeBackendUrl(config.backendUrl);
+  if (!backendUrl) {
+    return { ok: false, message: 'Database backend is not available.', session: null };
+  }
+
+  try {
+    const response = await fetch(`${backendUrl}/api/auth-register`, {
+      method: 'POST',
+      headers: getBackendHeaders(),
+      body: JSON.stringify(payload || {})
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      return {
+        ok: false,
+        message: body.message || `Account creation failed with ${response.status}.`,
+        session: null,
+        suggestedUserId: body.suggestedUserId || ''
+      };
+    }
+
+    return { ok: true, session: body.session || null };
+  } catch (error) {
+    return { ok: false, message: error.message, session: null };
+  }
+}
+
+async function loginAccount(config, payload) {
+  const backendUrl = sanitizeBackendUrl(config.backendUrl);
+  if (!backendUrl) {
+    return { ok: false, message: 'Database backend is not available.', session: null };
+  }
+
+  try {
+    const response = await fetch(`${backendUrl}/api/auth-login`, {
+      method: 'POST',
+      headers: getBackendHeaders(),
+      body: JSON.stringify(payload || {})
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      return { ok: false, message: body.message || `Sign in failed with ${response.status}.`, session: null };
+    }
+
+    return { ok: true, session: body.session || null };
+  } catch (error) {
+    return { ok: false, message: error.message, session: null };
+  }
+}
+
+async function updateAccountPassword(config, payload) {
+  const backendUrl = sanitizeBackendUrl(config.backendUrl);
+  if (!backendUrl) {
+    return { ok: false, message: 'Database backend is not available.' };
+  }
+
+  try {
+    const response = await fetch(`${backendUrl}/api/auth-account`, {
+      method: 'POST',
+      headers: getBackendHeaders(),
+      body: JSON.stringify({
+        action: 'updatePassword',
+        ...(payload || {})
+      })
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      return { ok: false, message: body.message || `Password update failed with ${response.status}.` };
+    }
+
+    return { ok: true, session: body.session || null, message: body.message || 'Password updated.' };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+async function disableAccount(config, payload) {
+  const backendUrl = sanitizeBackendUrl(config.backendUrl);
+  if (!backendUrl) {
+    return { ok: false, message: 'Database backend is not available.' };
+  }
+
+  try {
+    const response = await fetch(`${backendUrl}/api/auth-account`, {
+      method: 'POST',
+      headers: getBackendHeaders(),
+      body: JSON.stringify({
+        action: 'disableAccount',
+        ...(payload || {})
+      })
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      return { ok: false, message: body.message || `Account delete failed with ${response.status}.` };
+    }
+
+    return { ok: true, message: body.message || 'Account disabled.' };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+async function syncTypingEvents(config, userId, events) {
   if (!hasValidSupabaseConfig(config)) {
     return { ok: false, message: 'Supabase credentials are missing.', syncedIds: [] };
   }
@@ -643,7 +755,7 @@ async function syncTypingEvents(config, events) {
 
   const payload = events.map((event) => ({
     client_event_id: event.clientEventId,
-    user_id: event.userId,
+    user_id: userId,
     language: event.language,
     roman_input: event.romanInput,
     roman_lower: event.romanLower,
@@ -902,6 +1014,7 @@ module.exports = {
   createDefaultProfile,
   createDefaultPreferences,
   createDefaultCloudConfig,
+  clearPersistedAuthState,
   createEmptyLearningStore,
   createEmptyCloudCache,
   normalizeRomanInput,
@@ -927,6 +1040,10 @@ module.exports = {
   sanitizeSupabaseUrl,
   hasValidSupabaseConfig,
   testSupabaseConnection,
+  registerAccount,
+  loginAccount,
+  updateAccountPassword,
+  disableAccount,
   syncProfile,
   syncTypingEvents,
   fetchCloudCandidates,

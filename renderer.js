@@ -8,6 +8,7 @@ const {
   createDefaultProfile,
   createDefaultPreferences,
   createDefaultCloudConfig,
+  clearPersistedAuthState,
   createEmptyLearningStore,
   normalizeRomanInput,
   createRomanSignature,
@@ -32,14 +33,16 @@ const {
   sanitizeSupabaseUrl,
   hasValidSupabaseConfig,
   testSupabaseConnection,
+  registerAccount,
+  loginAccount,
+  updateAccountPassword,
+  disableAccount,
   syncProfile,
   syncTypingEvents,
   fetchCloudCandidates,
   fetchRemoteProfile,
   fetchUserTypingEvents,
-  buildStoreFromEvents,
-  hashPassword,
-  verifyPassword
+  buildStoreFromEvents
 } = require('./api/typing-learning');
 const editor = document.getElementById('editor');
 const btnMl = document.getElementById('btn-ml');
@@ -178,6 +181,7 @@ const settingsPassword = document.getElementById('settings-password');
 const settingsPasswordConfirm = document.getElementById('settings-password-confirm');
 const btnSavePassword = document.getElementById('btn-save-password');
 const btnSignOut = document.getElementById('btn-sign-out');
+const btnDeleteAccount = document.getElementById('btn-delete-account');
 const btnClearPassword = document.getElementById('btn-clear-password');
 const settingsBackendUrl = document.getElementById('settings-backend-url');
 const settingsSupabaseUrl = document.getElementById('settings-supabase-url');
@@ -200,6 +204,7 @@ const authGatewayStatus = document.getElementById('auth-gateway-status');
 const authGatewayButtonText = document.getElementById('auth-gateway-button-text');
 const authGatewayIcon = document.getElementById('auth-gateway-icon');
 const btnAuthPrimary = document.getElementById('btn-auth-primary');
+const btnAuthCreateAccount = document.getElementById('btn-auth-create-account');
 const welcomeModal = document.getElementById('welcome-modal');
 const welcomeName = document.getElementById('welcome-name');
 const welcomeUserId = document.getElementById('welcome-user-id');
@@ -210,6 +215,7 @@ const welcomeCloudOptIn = document.getElementById('welcome-cloud-opt-in');
 const welcomeStatus = document.getElementById('welcome-status');
 const btnCompleteOnboarding = document.getElementById('btn-complete-onboarding');
 const unlockModal = document.getElementById('unlock-modal');
+const unlockUserId = document.getElementById('unlock-user-id');
 const unlockPassword = document.getElementById('unlock-password');
 const unlockStatus = document.getElementById('unlock-status');
 const btnUnlockApp = document.getElementById('btn-unlock-app');
@@ -305,14 +311,15 @@ if (!learningStore || !learningStore.version) {
   writeStorage(localStorage, STORAGE_KEYS.learningStore, learningStore);
 }
 
+clearPersistedAuthState(localStorage);
 let syncQueue = readQueue(localStorage);
-let userProfile = readStorage(localStorage, STORAGE_KEYS.userProfile, null) || createDefaultProfile();
-let privacyPreferences = readStorage(localStorage, STORAGE_KEYS.preferences, null) || createDefaultPreferences();
+let userProfile = createDefaultProfile();
+let privacyPreferences = createDefaultPreferences();
 let cloudConfig = readStorage(localStorage, STORAGE_KEYS.cloudConfig, null) || createDefaultCloudConfig();
 let isSyncInProgress = false;
 let pendingCloudSyncTimer = null;
 let isAppUnlocked = false;
-let authGatewayMode = 'signin';
+let sessionToken = '';
 
 function generateEightDigitUserId() {
   return String(Math.floor(10000000 + Math.random() * 90000000));
@@ -327,11 +334,11 @@ if (!cloudConfig.backendUrl) {
 }
 
 function saveUserProfile() {
-  writeStorage(localStorage, STORAGE_KEYS.userProfile, userProfile);
+  return;
 }
 
 function savePrivacyPreferences() {
-  writeStorage(localStorage, STORAGE_KEYS.preferences, privacyPreferences);
+  return;
 }
 
 function saveCloudConfig() {
@@ -352,8 +359,6 @@ function saveSyncQueue() {
 }
 
 syncLegacyLearningMirror();
-saveUserProfile();
-savePrivacyPreferences();
 saveCloudConfig();
 
 // Toggle Languages
@@ -551,6 +556,57 @@ function setStatusMessage(target, message, tone = 'default') {
   }
 }
 
+function clearCachedLearningArtifacts() {
+  syncQueue = [];
+  saveSyncQueue();
+}
+
+function resetInMemorySession() {
+  userProfile = createDefaultProfile();
+  privacyPreferences = createDefaultPreferences();
+  sessionToken = '';
+  isAppUnlocked = false;
+  clearCachedLearningArtifacts();
+  learningStore = createEmptyLearningStore();
+  saveLearningStore();
+}
+
+function applyAuthenticatedSession(session) {
+  if (!session) return;
+
+  userProfile.userId = session.userId || generateEightDigitUserId();
+  userProfile.displayName = session.displayName || '';
+  userProfile.passwordEnabled = session.passwordEnabled === true;
+  userProfile.passwordHash = '';
+  userProfile.lastUnlockedAt = new Date().toISOString();
+  privacyPreferences.collectionConsent = session.collectionConsent === true;
+  privacyPreferences.localLearningEnabled = session.localLearningEnabled !== false;
+  privacyPreferences.cloudSyncEnabled = session.cloudSyncEnabled === true;
+  privacyPreferences.autoSyncEnabled = true;
+  sessionToken = session.sessionToken || '';
+}
+
+async function hydrateLearningStoreForSession() {
+  clearCachedLearningArtifacts();
+  learningStore = createEmptyLearningStore();
+
+  if (!userProfile.userId) {
+    saveLearningStore();
+    return;
+  }
+
+  const eventsResult = await fetchUserTypingEvents(cloudConfig, userProfile.userId, 1200);
+  if (eventsResult.ok) {
+    learningStore = buildStoreFromEvents(eventsResult.rows);
+    saveLearningStore();
+    refreshLearningUI(`Loaded ${eventsResult.rows.length} typing records from the database.`);
+    return;
+  }
+
+  saveLearningStore();
+  refreshLearningUI(eventsResult.message || 'Could not load typing records from the database.');
+}
+
 function isLearningCollectionEnabled() {
   return privacyPreferences.collectionConsent === true && privacyPreferences.localLearningEnabled === true;
 }
@@ -684,93 +740,58 @@ function refreshLearningUI(statusMessage = null) {
   updateDashboardSummary(statusMessage);
 }
 
-function needsAccountSetup() {
-  return !userProfile.displayName || !userProfile.passwordHash || privacyPreferences.collectionConsent === null;
-}
-
 function showAuthGateway(message = null) {
-  if (!authGatewayModal) {
-    if (needsAccountSetup()) {
-      maybeShowOnboarding();
-    } else {
-      maybeShowUnlock(message || 'Password is required to continue.');
-    }
-    return;
-  }
+  if (!authGatewayModal) return;
 
-  authGatewayMode = needsAccountSetup() ? 'create' : 'signin';
-  isAppUnlocked = false;
-
+  resetInMemorySession();
   if (welcomeModal) welcomeModal.classList.add('hidden');
   if (unlockModal) unlockModal.classList.add('hidden');
 
-  if (authGatewayBadge) {
-    authGatewayBadge.textContent = authGatewayMode === 'create' ? 'CREATE ACCOUNT' : 'SIGN IN';
-  }
-
-  if (authGatewayTitle) {
-    authGatewayTitle.textContent = authGatewayMode === 'create'
-      ? 'Create your Nakshathram account'
-      : 'Sign in to Nakshathram';
-  }
-
+  if (authGatewayBadge) authGatewayBadge.textContent = 'LOGIN FIRST';
+  if (authGatewayTitle) authGatewayTitle.textContent = 'Sign in or create an account';
   if (authGatewayCopy) {
-    authGatewayCopy.textContent = authGatewayMode === 'create'
-      ? 'Start here first. Create your account with a password and one-time sharing agreement before entering the app.'
-      : 'Start here first. Sign in with your password to open Nakshathram and continue where you left off.';
+    authGatewayCopy.textContent = 'Your sign-in happens against the database, not the local PC. Use your 8-digit user ID and password to sign in, or create a new account first.';
   }
-
-  if (authGatewayUserName) {
-    authGatewayUserName.textContent = authGatewayMode === 'create'
-      ? (userProfile.displayName || 'New local account')
-      : (userProfile.displayName || 'Saved local account');
-  }
-
-  if (authGatewayUserId) authGatewayUserId.textContent = userProfile.userId;
-  if (authGatewayButtonText) authGatewayButtonText.textContent = authGatewayMode === 'create' ? 'Create Account' : 'Sign In';
-  if (authGatewayIcon) authGatewayIcon.textContent = authGatewayMode === 'create' ? 'person_add' : 'lock_open';
-
-  const defaultMessage = authGatewayMode === 'create'
-    ? 'Create your account to enter the app.'
-    : 'Sign in to continue into the app.';
-  setStatusMessage(authGatewayStatus, message || defaultMessage, authGatewayMode === 'create' ? 'accent' : 'default');
+  if (authGatewayUserName) authGatewayUserName.textContent = 'Use your 8-digit user ID and password';
+  if (authGatewayUserId) authGatewayUserId.textContent = 'Create a new account to get your credentials PDF';
+  if (authGatewayButtonText) authGatewayButtonText.textContent = 'Sign In';
+  if (authGatewayIcon) authGatewayIcon.textContent = 'lock_open';
+  setStatusMessage(authGatewayStatus, message || 'Choose sign in or create account to continue.', 'default');
   authGatewayModal.classList.remove('hidden');
 }
 
 function maybeShowOnboarding() {
   if (!welcomeModal) return;
 
-  const shouldShow = needsAccountSetup();
-  if (!shouldShow) return;
-
   if (authGatewayModal) authGatewayModal.classList.add('hidden');
   if (unlockModal) unlockModal.classList.add('hidden');
+  if (!/^\d{8}$/.test(String(userProfile.userId || ''))) {
+    userProfile.userId = generateEightDigitUserId();
+  }
   if (welcomeUserId) welcomeUserId.textContent = userProfile.userId;
   if (welcomeName) welcomeName.value = userProfile.displayName || '';
-  if (welcomeConsent) welcomeConsent.checked = privacyPreferences.collectionConsent === true;
+  if (welcomePassword) welcomePassword.value = '';
+  if (welcomePasswordConfirm) welcomePasswordConfirm.value = '';
+  if (welcomeConsent) welcomeConsent.checked = false;
   setStatusMessage(welcomeStatus, 'Accept the one-time sharing agreement to continue. This choice will be locked after you enter the app.');
   welcomeModal.classList.remove('hidden');
   isAppUnlocked = false;
 }
 
-function maybeShowUnlock(message = 'Password is required to continue.') {
+function maybeShowUnlock(message = 'User ID and password are required to continue.') {
   if (!unlockModal) {
     isAppUnlocked = true;
     return;
   }
 
-  if (userProfile.passwordHash) {
-    if (authGatewayModal) authGatewayModal.classList.add('hidden');
-    if (welcomeModal) welcomeModal.classList.add('hidden');
-    if (unlockPassword) unlockPassword.value = '';
-    setStatusMessage(unlockStatus, message);
-    unlockModal.classList.remove('hidden');
-    if (unlockPassword) unlockPassword.focus();
-    isAppUnlocked = false;
-    return;
-  }
-
-  isAppUnlocked = true;
+  if (authGatewayModal) authGatewayModal.classList.add('hidden');
+  if (welcomeModal) welcomeModal.classList.add('hidden');
+  if (unlockUserId) unlockUserId.value = '';
+  if (unlockPassword) unlockPassword.value = '';
+  setStatusMessage(unlockStatus, message);
+  unlockModal.classList.remove('hidden');
+  if (unlockUserId) unlockUserId.focus();
+  isAppUnlocked = false;
 }
 
 function signOutCurrentSession() {
@@ -798,7 +819,6 @@ async function recordTypingSelection(romanInput, nativeWord, source = 'translite
     nativeWord,
     source,
     weight,
-    userId: userProfile.userId,
     deviceId,
     clientVersion: packageJson.version,
     notePath: activeFilePath || ''
@@ -887,7 +907,7 @@ async function syncPendingCloudData(silent = false) {
   }
 
   const queueSnapshot = [...syncQueue];
-  const eventsResult = await syncTypingEvents(cloudConfig, queueSnapshot);
+  const eventsResult = await syncTypingEvents(cloudConfig, userProfile.userId, queueSnapshot);
   isSyncInProgress = false;
 
   if (!eventsResult.ok) {
@@ -1610,13 +1630,14 @@ if (settingsModal) {
 
 if (btnAuthPrimary) {
   btnAuthPrimary.addEventListener('click', () => {
-    if (authGatewayMode === 'create') {
-      maybeShowOnboarding();
-      if (welcomeName) welcomeName.focus();
-      return;
-    }
+    maybeShowUnlock('Enter your 8-digit user ID and password to continue.');
+  });
+}
 
-    maybeShowUnlock('Password is required to continue.');
+if (btnAuthCreateAccount) {
+  btnAuthCreateAccount.addEventListener('click', () => {
+    maybeShowOnboarding();
+    if (welcomeName) welcomeName.focus();
   });
 }
 
@@ -1631,11 +1652,14 @@ if (btnSaveProfile) {
     userProfile.displayName = displayName;
     saveUserProfile();
     updateSettingsUI();
-    refreshLearningUI('Profile saved.');
-
-    if (isCloudSyncEnabled() && hasValidSupabaseConfig(cloudConfig)) {
-      await syncProfile(cloudConfig, userProfile, privacyPreferences);
+    const syncResult = await syncProfile(cloudConfig, userProfile, privacyPreferences);
+    if (!syncResult.ok) {
+      setStatusMessage(settingsSyncStatus, syncResult.message, 'error');
+      return;
     }
+
+    refreshLearningUI('Profile saved.');
+    setStatusMessage(settingsSyncStatus, 'Profile saved to the database.', 'success');
   });
 }
 
@@ -1700,28 +1724,70 @@ if (btnSavePassword) {
       return;
     }
 
-    if (password) {
-      userProfile.passwordHash = await hashPassword(password);
-      userProfile.passwordEnabled = true;
-      saveUserProfile();
-      settingsPassword.value = '';
-      settingsPasswordConfirm.value = '';
-      updateSettingsUI(true);
-      const pdfResult = await downloadCredentialsPdf(password);
-      setStatusMessage(
-        settingsSyncStatus,
-        pdfResult.ok ? 'Password updated and credentials PDF saved.' : pdfResult.message,
-        pdfResult.ok ? 'success' : 'error'
-      );
-    } else {
+    if (!password) {
       setStatusMessage(settingsSyncStatus, 'Enter a password before saving.', 'error');
+      return;
     }
+
+    if (!sessionToken) {
+      setStatusMessage(settingsSyncStatus, 'Sign in again before changing the password.', 'error');
+      return;
+    }
+
+    const passwordResult = await updateAccountPassword(cloudConfig, {
+      sessionToken,
+      newPassword: password,
+      displayName: userProfile.displayName,
+      collectionConsent: privacyPreferences.collectionConsent === true,
+      localLearningEnabled: privacyPreferences.localLearningEnabled !== false,
+      cloudSyncEnabled: privacyPreferences.cloudSyncEnabled === true
+    });
+
+    if (!passwordResult.ok) {
+      setStatusMessage(settingsSyncStatus, passwordResult.message, 'error');
+      return;
+    }
+
+    if (passwordResult.session) {
+      applyAuthenticatedSession(passwordResult.session);
+    }
+
+    settingsPassword.value = '';
+    settingsPasswordConfirm.value = '';
+    updateSettingsUI(true);
+    const pdfResult = await downloadCredentialsPdf(password);
+    setStatusMessage(
+      settingsSyncStatus,
+      pdfResult.ok ? 'Password updated and credentials PDF saved.' : pdfResult.message,
+      pdfResult.ok ? 'success' : 'error'
+    );
   });
 }
 
 if (btnSignOut) {
   btnSignOut.addEventListener('click', () => {
     signOutCurrentSession();
+  });
+}
+
+if (btnDeleteAccount) {
+  btnDeleteAccount.addEventListener('click', async () => {
+    if (!sessionToken) {
+      setStatusMessage(settingsSyncStatus, 'Sign in again before deleting the account.', 'error');
+      return;
+    }
+
+    const confirmed = confirm('Delete this account? The account will become unusable, but the existing database typing data will stay unchanged.');
+    if (!confirmed) return;
+
+    const result = await disableAccount(cloudConfig, { sessionToken });
+    if (!result.ok) {
+      setStatusMessage(settingsSyncStatus, result.message, 'error');
+      return;
+    }
+
+    settingsModal.classList.add('hidden');
+    showAuthGateway('This account has been disabled. Its stored database typing data was left unchanged.');
   });
 }
 
@@ -1754,55 +1820,6 @@ if (btnSyncNow) {
   });
 }
 
-if (btnLinkExistingAccount) {
-  btnLinkExistingAccount.addEventListener('click', async () => {
-    const restoreUserId = settingsRestoreUserId.value.trim();
-    const restorePassword = settingsRestorePassword.value;
-
-    if (!restoreUserId || !restorePassword) {
-      setStatusMessage(settingsRestoreStatus, 'Enter both the existing user ID and password.', 'error');
-      return;
-    }
-
-    cloudConfig.backendUrl = sanitizeBackendUrl(settingsBackendUrl ? settingsBackendUrl.value : cloudConfig.backendUrl);
-    cloudConfig.supabaseUrl = sanitizeSupabaseUrl(settingsSupabaseUrl.value);
-    cloudConfig.supabaseAnonKey = settingsSupabaseKey.value.trim();
-    saveCloudConfig();
-
-    const profileResult = await fetchRemoteProfile(cloudConfig, restoreUserId);
-    if (!profileResult.ok || !profileResult.profile) {
-      setStatusMessage(settingsRestoreStatus, profileResult.message || 'Could not find that cloud profile.', 'error');
-      return;
-    }
-
-    const passwordMatches = await verifyPassword(restorePassword, profileResult.profile.password_hash || '');
-    if (!passwordMatches) {
-      setStatusMessage(settingsRestoreStatus, 'Password did not match that stored profile.', 'error');
-      return;
-    }
-
-    const eventsResult = await fetchUserTypingEvents(cloudConfig, restoreUserId);
-    if (!eventsResult.ok) {
-      setStatusMessage(settingsRestoreStatus, eventsResult.message, 'error');
-      return;
-    }
-
-    userProfile.userId = profileResult.profile.user_id;
-    userProfile.displayName = profileResult.profile.display_name || userProfile.displayName;
-    userProfile.passwordHash = profileResult.profile.password_hash || '';
-    userProfile.passwordEnabled = Boolean(profileResult.profile.password_enabled);
-    privacyPreferences.collectionConsent = profileResult.profile.collection_consent !== false;
-    privacyPreferences.localLearningEnabled = profileResult.profile.local_learning_enabled !== false;
-    privacyPreferences.cloudSyncEnabled = profileResult.profile.cloud_sync_enabled === true;
-    learningStore = buildStoreFromEvents(eventsResult.rows);
-    saveUserProfile();
-    savePrivacyPreferences();
-    saveLearningStore();
-    refreshLearningUI('Existing cloud account linked to this device.');
-    setStatusMessage(settingsRestoreStatus, `Linked ${eventsResult.rows.length} cloud typing records.`, 'success');
-  });
-}
-
 if (btnCompleteOnboarding) {
   btnCompleteOnboarding.addEventListener('click', async () => {
     const displayName = welcomeName.value.trim();
@@ -1829,18 +1846,27 @@ if (btnCompleteOnboarding) {
       return;
     }
 
-    userProfile.displayName = displayName;
-    userProfile.passwordHash = await hashPassword(password);
-    userProfile.passwordEnabled = true;
-    privacyPreferences.collectionConsent = true;
-    privacyPreferences.localLearningEnabled = true;
-    privacyPreferences.cloudSyncEnabled = true;
-    privacyPreferences.autoSyncEnabled = true;
-    saveUserProfile();
-    savePrivacyPreferences();
+    const registerResult = await registerAccount(cloudConfig, {
+      userId: userProfile.userId,
+      displayName,
+      password,
+      collectionConsent: true
+    });
+
+    if (!registerResult.ok || !registerResult.session) {
+      if (registerResult.suggestedUserId) {
+        userProfile.userId = registerResult.suggestedUserId;
+        if (welcomeUserId) welcomeUserId.textContent = registerResult.suggestedUserId;
+      }
+      setStatusMessage(welcomeStatus, registerResult.message || 'Could not create the account.', 'error');
+      return;
+    }
+
+    applyAuthenticatedSession(registerResult.session);
     updateSettingsUI(true);
-    refreshLearningUI('Welcome profile saved.');
     welcomeModal.classList.add('hidden');
+    await hydrateLearningStoreForSession();
+    refreshLearningUI('Welcome profile saved.');
     schedulePendingCloudSync();
 
     const pdfResult = await downloadCredentialsPdf(password);
@@ -1855,17 +1881,35 @@ if (btnCompleteOnboarding) {
 
 if (btnUnlockApp) {
   btnUnlockApp.addEventListener('click', async () => {
+    const enteredUserId = unlockUserId ? unlockUserId.value.trim() : '';
     const enteredPassword = unlockPassword.value;
-    const passwordMatches = await verifyPassword(enteredPassword, userProfile.passwordHash);
-    if (!passwordMatches) {
-      setStatusMessage(unlockStatus, 'Password mismatch. Try again.', 'error');
+
+    if (!enteredUserId || !/^\d{8}$/.test(enteredUserId)) {
+      setStatusMessage(unlockStatus, 'Enter your valid 8-digit user ID.', 'error');
       return;
     }
 
+    if (!enteredPassword) {
+      setStatusMessage(unlockStatus, 'Enter your password to continue.', 'error');
+      return;
+    }
+
+    const loginResult = await loginAccount(cloudConfig, {
+      userId: enteredUserId,
+      password: enteredPassword
+    });
+
+    if (!loginResult.ok || !loginResult.session) {
+      setStatusMessage(unlockStatus, loginResult.message || 'User ID or password did not match.', 'error');
+      return;
+    }
+
+    applyAuthenticatedSession(loginResult.session);
     unlockModal.classList.add('hidden');
+    if (unlockUserId) unlockUserId.value = '';
     unlockPassword.value = '';
-    userProfile.lastUnlockedAt = new Date().toISOString();
-    saveUserProfile();
+    await hydrateLearningStoreForSession();
+    updateSettingsUI(true);
     isAppUnlocked = true;
 
     const pdfResult = await downloadCredentialsPdf(enteredPassword);
