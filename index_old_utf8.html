@@ -1,0 +1,453 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nakshathram</title>
+  <link rel="stylesheet" href="index.css">
+  <!-- Google Fonts & Material Symbols for modern UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-text">Nakshathram</span>
+        </div>
+        <div class="made-using">
+          <span class="made-using-text">made using</span>
+          <div class="using-logos">
+            <div class="using-item" id="logo-varnam" title="Varnam Project">
+              <img src="assets/varnam.png" alt="Varnam">
+            </div>
+            <div class="using-item" id="logo-google" title="Google Input Tools ML">
+              <img src="assets/google-ml.png" alt="Google ML">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="new-file-btn" id="btn-add-word">
+        <span class="material-symbols-outlined">add</span>
+        Add Words
+      </button>
+
+      <button class="new-file-btn" id="btn-ai-dashboard">
+        <span class="material-symbols-outlined">psychology</span>
+        AI Dashboard
+      </button>
+
+      <button class="new-file-btn" id="btn-plugins">
+        <span class="material-symbols-outlined">extension</span>
+        Plugins
+      </button>
+
+      <div class="dropdown-wrapper">
+        <button class="new-file-btn" id="btn-new-file-main">
+          <span class="material-symbols-outlined">add_box</span>
+          New File
+        </button>
+        <div class="dropdown-menu hidden" id="new-file-menu">
+          <div class="dropdown-item" id="btn-create-new">
+            <span class="material-symbols-outlined">description</span>
+            Create New
+          </div>
+          <div class="dropdown-item" id="btn-select-file">
+            <span class="material-symbols-outlined">file_open</span>
+            Select from files
+          </div>
+        </div>
+      </div>
+
+      <div class="file-list-section" id="section-today">
+        <h4 class="section-title">Today</h4>
+        <ul class="file-list" id="file-list-today">
+          <!-- Populated by renderer.js -->
+        </ul>
+      </div>
+
+      <div class="file-list-section" id="section-yesterday">
+        <h4 class="section-title">Yesterday</h4>
+        <ul class="file-list" id="file-list-yesterday">
+        </ul>
+      </div>
+
+      <div class="file-list-section" id="section-earlier">
+        <h4 class="section-title">Earlier</h4>
+        <ul class="file-list" id="file-list-earlier">
+        </ul>
+      </div>
+
+      <div class="sidebar-spotify-widget" id="spotify-widget">
+        <!-- Spotify Plugin Section moved from modal -->
+        <div class="plugin-section" id="spotify-plugin">
+          <div class="plugin-header">
+            <h4>Spotify</h4>
+            <span class="plugin-badge">BYOK</span>
+          </div>
+          
+          <!-- BYOK Setup Phase -->
+          <div id="spotify-setup-phase" class="plugin-phase">
+            <input type="text" id="spotify-client-id-input" class="sidebar-input" placeholder="Spotify Client ID">
+            <button class="sidebar-action-btn" id="btn-save-spotify-key">Save Key</button>
+            <p class="helper-text">Add <code>127.0.0.1:8888/callback</code> in <a href="#" id="link-spotify-dev">Dev Portal</a></p>
+          </div>
+
+          <!-- Login Phase -->
+          <div id="spotify-login-phase" class="plugin-phase hidden">
+            <button class="sidebar-spotify-btn" id="btn-spotify-login">
+              <span class="material-symbols-outlined">login</span>
+              Login
+            </button>
+            <button class="sidebar-link-btn" id="btn-edit-spotify-key">Change ID</button>
+          </div>
+
+          <!-- Player Phase -->
+          <div id="spotify-player-phase" class="plugin-phase hidden">
+            <div class="spotify-search-bar">
+              <input type="text" id="spotify-search-input" class="sidebar-input" placeholder="Search music...">
+              <button class="icon-btn" id="btn-spotify-search">
+                <span class="material-symbols-outlined">search</span>
+              </button>
+            </div>
+            
+            <div id="spotify-search-results" class="spotify-results-list hidden">
+               <!-- Populated by JS -->
+            </div>
+
+            <div class="spotify-footer">
+               <button class="sidebar-link-btn" id="btn-spotify-logout">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <p class="storage-notice">Your files are only stored in your pc</p>
+      </div>
+    </aside>
+
+    <!-- Main Editor Area -->
+    <main class="main-content">
+      
+      <!-- Top Toolbar -->
+      <header class="toolbar">
+        <div class="toolbar-center">
+          <div class="toolbar-items">
+            <div class="tool-group">
+              <button class="tool-btn" title="Undo"><span class="material-symbols-outlined">undo</span></button>
+              <button class="tool-btn" title="Redo"><span class="material-symbols-outlined">redo</span></button>
+            </div>
+
+            <div class="tool-group font-size-group">
+              <button class="tool-btn sz-btn" id="btn-fs-dec">-</button>
+              <span class="font-size" id="current-fs">12</span>
+              <button class="tool-btn sz-btn" id="btn-fs-inc">+</button>
+            </div>
+
+            <div class="tool-group text-styles">
+              <button class="tool-btn font-weight-bold" title="Bold">B</button>
+              <button class="tool-btn font-style-italic" title="Italic">I</button>
+              <button class="tool-btn text-decoration-underline" title="Underline">U</button>
+              <button class="tool-btn" title="Text Color"><span class="material-symbols-outlined">format_color_text</span></button>
+              <button class="tool-btn" title="Highlight"><span class="material-symbols-outlined">border_color</span></button>
+            </div>
+
+            <div class="tool-group text-align">
+              <button class="tool-btn correct-trigger hidden" id="btn-is-correct">Is it correct?</button>
+              <div class="dropdown-wrapper">
+                <button class="tool-btn" id="btn-more" title="More"><span class="material-symbols-outlined">more_vert</span></button>
+                <div class="dropdown-menu hidden" id="more-menu">
+                  <label class="dropdown-item">
+                    <input type="checkbox" id="toggle-suggestions">
+                    Turn on suggestions
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="window-controls">
+          <button class="win-btn" id="win-min" title="Minimize">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <button class="win-btn win-close" id="win-close" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="editor-view-container" id="editor-view">
+        <div id="editor-spotify-player" class="editor-docked-player hidden">
+          <!-- iFrame injected here -->
+        </div>
+        <div class="editor-wrapper">
+          <div id="editor" contenteditable="true" spellcheck="false" placeholder="Type here..."></div>
+        </div>
+      </div>
+
+
+      <div class="floating-bar">
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="btn-ml">മലയാളം</button>
+          <button class="lang-btn" id="btn-en">English</button>
+        </div>
+
+        <button class="float-action-btn" id="btn-copy">
+          <span class="material-symbols-outlined">content_copy</span>
+          Copy
+        </button>
+
+        <div class="dropdown-wrapper up">
+          <button class="float-action-btn icon-only" id="btn-lang-selector">
+            <span class="material-symbols-outlined">keyboard_arrow_up</span>
+          </button>
+          <div class="dropdown-menu lang-menu hidden" id="lang-menu">
+            <div class="dropdown-item-lang" data-lang="as" data-name="অসমীয়া (Assamese)">Assamese</div>
+            <div class="dropdown-item-lang" data-lang="bn" data-name="বাংলা (Bengali)">Bengali</div>
+            <div class="dropdown-item-lang" data-lang="gu" data-name="ગુજરાતી (Gujarati)">Gujarati</div>
+            <div class="dropdown-item-lang" data-lang="hi" data-name="हिन्दी (Hindi)">Hindi</div>
+            <div class="dropdown-item-lang" data-lang="kn" data-name="ಕನ್ನಡ (Kannada)">Kannada</div>
+            <div class="dropdown-item-lang" data-lang="ml" data-name="മലയാളം (Malayalam)">Malayalam</div>
+            <div class="dropdown-item-lang" data-lang="mr" data-name="मराठी (Marathi)">Marathi</div>
+            <div class="dropdown-item-lang" data-lang="ne" data-name="नेपाली (Nepali)">Nepali</div>
+            <div class="dropdown-item-lang" data-lang="or" data-name="ଓଡ଼ିଆ (Odia)">Odia</div>
+            <div class="dropdown-item-lang" data-lang="pa" data-name="ਪੰਜਾਬੀ (Punjabi)">Punjabi</div>
+            <div class="dropdown-item-lang" data-lang="sa" data-name="संस्कृतम् (Sanskrit)">Sanskrit</div>
+            <div class="dropdown-item-lang" data-lang="ta" data-name="தமிழ் (Tamil)">Tamil</div>
+            <div class="dropdown-item-lang" data-lang="te" data-name="తెలుగు (Telugu)">Telugu</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+
+    <!-- Suggestions Overlay Placeholder -->
+    <div id="suggestions-box" class="suggestions-box hidden"></div>
+
+    <!-- Add Words Modal Overlay -->
+    <div id="add-word-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>WORDS</h3>
+          <button class="close-modal" id="btn-close-modal"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="add-word-form">
+            <input type="text" id="input-pattern" class="word-input" placeholder="Pattern in English">
+            <input type="text" id="input-word" class="word-input" placeholder="Word in Malayalam">
+            <button class="btn-primary" id="btn-submit-word">
+              <span class="material-symbols-outlined" style="font-size: 1.2rem;">add</span>
+              ADD WORD
+            </button>
+          </div>
+          
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <button class="btn-primary" id="btn-clear-custom-dict" style="background-color: #ff4757; font-size: 0.8rem; padding: 6px 12px; height: 32px;">
+              <span class="material-symbols-outlined" style="font-size: 1.1rem;">delete_sweep</span>
+              Delete All Words
+            </button>
+          </div>
+          
+          <div class="word-table-wrapper">
+            <table class="word-table">
+              <thead>
+                <tr>
+                  <th>Word</th>
+                  <th>Pattern</th>
+                  <th style="width: 50px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="word-table-body">
+                <tr>
+                  <td colspan="2" class="empty-data">No data available</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AI Dashboard Modal -->
+  <div id="ai-dashboard-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>AI LEARNING DASHBOARD</h3>
+        <button class="close-modal" id="btn-close-ai-modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="ai-stats-summary">
+          <p>This dashboard shows the words the Local AI has learned from your typing habits. These words are prioritized in future suggestions.</p>
+          <button class="btn-primary" id="btn-clear-ai-memory" style="background-color: #d73a49; margin-top: 10px;">
+            <span class="material-symbols-outlined">delete_sweep</span>
+            Clear All AI Memory
+          </button>
+        </div>
+        <div class="word-table-wrapper" style="margin-top: 20px;">
+          <table class="word-table">
+            <thead>
+              <tr>
+                <th>Pattern</th>
+                <th>Learned Word</th>
+                <th>Freq</th>
+                <th style="width: 50px; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="ai-word-table-body">
+              <tr><td colspan="3" class="empty-data">No data available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Correction / Handwriting Modal -->
+  <div id="is-correct-modal" class="modal-overlay hidden">
+    <div class="modal-content correction-modal">
+      <div class="modal-header">
+        <div class="header-titles">
+          <h3>WHAT'S MISSING?</h3>
+          <p class="sub-heading">Draw it here along with the word</p>
+        </div>
+        <button class="close-modal" id="btn-close-correct-modal"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="correction-display">
+          <div class="info-pair">
+            <span class="label">Typed:</span>
+            <span id="display-english-word" class="val">kaadu</span>
+          </div>
+        </div>
+
+        <div class="correction-main-layout">
+          <div class="canvas-area">
+            <div class="canvas-container">
+              <canvas id="drawing-canvas"></canvas>
+              <div class="canvas-hint">Draw over or add missing strokes</div>
+            </div>
+            <div class="horizontal-control-row">
+              <span class="material-symbols-outlined" title="Move Horizontally">swap_horiz</span>
+              <input type="range" id="ghost-x" min="-200" max="200" value="0" class="ghost-slider-h">
+            </div>
+          </div>
+          
+          <div class="vertical-control-column">
+            <input type="range" id="ghost-y" min="-100" max="100" value="0" class="ghost-slider-v">
+            <span class="material-symbols-outlined" title="Move Vertically">swap_vert</span>
+          </div>
+        </div>
+
+        <div class="ghost-secondary-controls">
+          <div class="control-item">
+            <span class="material-symbols-outlined" title="Ghost Size">format_size</span>
+            <input type="range" id="ghost-size" min="20" max="150" value="64" class="ghost-slider-s">
+          </div>
+          <button class="icon-btn-small" id="btn-reset-ghost" title="Reset Position & Size">
+            <span class="material-symbols-outlined">restart_alt</span>
+            Reset Ghost
+          </button>
+        </div>
+
+        <div id="correction-results" class="correction-results hidden">
+          <p class="results-hint">Pick the words to join them:</p>
+          <div id="results-list" class="results-list"></div>
+        </div>
+
+        <div class="modal-footer-actions">
+          <button class="modal-btn secondary" id="btn-clear-canvas">
+            <span class="material-symbols-outlined">delete</span> Clear
+          </button>
+          <button class="modal-btn secondary" id="btn-eraser">
+            <span class="material-symbols-outlined">ink_eraser</span> Eraser
+          </button>
+          <button class="modal-btn primary" id="btn-verify-update">
+            <span class="material-symbols-outlined">check_circle</span> Verify & Update
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div class="modal hidden" id="rename-modal">
+    <div class="modal-content">
+      <h3 class="modal-title">
+        <span class="material-symbols-outlined">edit</span>
+        Rename Note
+      </h3>
+      <input type="text" id="rename-input" class="modal-input" placeholder="Enter new name...">
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="btn-cancel-rename">Cancel</button>
+        <button class="modal-btn primary" id="btn-confirm-rename">Rename</button>
+      </div>
+    </div>
+  </div>
+  <!-- Create New Modal -->
+  <div class="modal hidden" id="create-modal">
+    <div class="modal-content">
+      <h3 class="modal-title">
+        <span class="material-symbols-outlined">add_box</span>
+        Create New Note
+      </h3>
+      <input type="text" id="create-input" class="modal-input" placeholder="Enter file name...">
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="btn-cancel-create">Cancel</button>
+        <button class="modal-btn primary" id="btn-confirm-create">Create</button>
+      </div>
+    </div>
+  </div>
+  <!-- Debug Log Box -->
+  <div id="debug-log-box" class="debug-log-box hidden">
+    <div class="debug-log-header">
+      <span>Debug Logs</span>
+      <button id="btn-clear-logs"><span class="material-symbols-outlined">delete</span></button>
+    </div>
+    <div id="debug-log-content" class="debug-log-content"></div>
+  </div>
+
+  <!-- Plugins Modal -->
+  <div id="plugins-modal" class="modal-overlay hidden">
+    <div class="modal-content plugins-modal-content">
+      <div class="modal-header">
+        <h3>PLUGINS</h3>
+        <button class="close-modal" id="btn-close-plugins-modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body plugins-body">
+        <div class="plugin-cards-grid">
+          <div class="plugin-card" id="card-spotify">
+            <div class="card-icon spotify-icon">
+              <span class="material-symbols-outlined">music_note</span>
+            </div>
+            <div class="card-info">
+              <h4>Spotify</h4>
+              <p>Search and play music while you write.</p>
+            </div>
+          </div>
+          <!-- More plugins can be added here -->
+        </div>
+      </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

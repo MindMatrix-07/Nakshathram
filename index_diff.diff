@@ -1,0 +1,180 @@
+diff --git a/index_old_utf8.html b/index.html
+index a4d0122..518ee86 100644
+--- a/index_old_utf8.html
++++ b/index.html
+@@ -1,4 +1,4 @@
+-﻿<!DOCTYPE html>
++<!DOCTYPE html>
+ <html lang="en">
+ <head>
+   <meta charset="UTF-8">
+@@ -50,8 +50,8 @@
+ 
+       <div class="dropdown-wrapper">
+         <button class="new-file-btn" id="btn-new-file-main">
+-          <span class="material-symbols-outlined">add_box</span>
+-          New File
++          <span class="material-symbols-outlined">folder</span>
++          Files
+         </button>
+         <div class="dropdown-menu hidden" id="new-file-menu">
+           <div class="dropdown-item" id="btn-create-new">
+@@ -62,6 +62,14 @@
+             <span class="material-symbols-outlined">file_open</span>
+             Select from files
+           </div>
++          <div class="dropdown-item" id="btn-save-txt">
++            <span class="material-symbols-outlined">save</span>
++            Save file
++          </div>
++          <div class="dropdown-item" id="btn-share-txt">
++            <span class="material-symbols-outlined">share</span>
++            Share file
++          </div>
+         </div>
+       </div>
+ 
+@@ -84,49 +92,9 @@
+         </ul>
+       </div>
+ 
+-      <div class="sidebar-spotify-widget" id="spotify-widget">
+-        <!-- Spotify Plugin Section moved from modal -->
+-        <div class="plugin-section" id="spotify-plugin">
+-          <div class="plugin-header">
+-            <h4>Spotify</h4>
+-            <span class="plugin-badge">BYOK</span>
+-          </div>
+-          
+-          <!-- BYOK Setup Phase -->
+-          <div id="spotify-setup-phase" class="plugin-phase">
+-            <input type="text" id="spotify-client-id-input" class="sidebar-input" placeholder="Spotify Client ID">
+-            <button class="sidebar-action-btn" id="btn-save-spotify-key">Save Key</button>
+-            <p class="helper-text">Add <code>127.0.0.1:8888/callback</code> in <a href="#" id="link-spotify-dev">Dev Portal</a></p>
+-          </div>
+-
+-          <!-- Login Phase -->
+-          <div id="spotify-login-phase" class="plugin-phase hidden">
+-            <button class="sidebar-spotify-btn" id="btn-spotify-login">
+-              <span class="material-symbols-outlined">login</span>
+-              Login
+-            </button>
+-            <button class="sidebar-link-btn" id="btn-edit-spotify-key">Change ID</button>
+-          </div>
+ 
+-          <!-- Player Phase -->
+-          <div id="spotify-player-phase" class="plugin-phase hidden">
+-            <div class="spotify-search-bar">
+-              <input type="text" id="spotify-search-input" class="sidebar-input" placeholder="Search music...">
+-              <button class="icon-btn" id="btn-spotify-search">
+-                <span class="material-symbols-outlined">search</span>
+-              </button>
+-            </div>
+-            
+-            <div id="spotify-search-results" class="spotify-results-list hidden">
+-               <!-- Populated by JS -->
+-            </div>
+-
+-            <div class="spotify-footer">
+-               <button class="sidebar-link-btn" id="btn-spotify-logout">Logout</button>
+-            </div>
+-          </div>
+-        </div>
+-      </div>
++      <!-- Plugin Host: Sidebar widgets are injected here by the plugin loader -->
++      <div id="plugin-sidebar-host"></div>
+ 
+       <div class="sidebar-footer">
+         <p class="storage-notice">Your files are only stored in your pc</p>
+@@ -411,6 +379,51 @@
+       </div>
+     </div>
+   </div>
++
++  <!-- Share Modal -->
++  <div class="modal hidden" id="share-modal">
++    <div class="modal-content share-modal-content">
++      <div class="share-header">
++        <h3 class="modal-title">
++          <span class="material-symbols-outlined">ios_share</span>
++          Share Note
++        </h3>
++        <button class="close-modal" id="btn-close-share"><span class="material-symbols-outlined">close</span></button>
++      </div>
++      
++      <div class="share-preview">
++        <div class="share-icon"><span class="material-symbols-outlined">description</span></div>
++        <div class="share-info">
++          <div class="share-title" id="share-file-name">Note</div>
++          <div class="share-desc">Text Document</div>
++        </div>
++      </div>
++
++      <div class="share-section-title">Share using</div>
++      <div class="share-options-grid">
++        <div class="share-option" id="share-copy">
++          <div class="share-option-icon copy-icon"><span class="material-symbols-outlined">content_copy</span></div>
++          <span>Copy Text</span>
++        </div>
++        <div class="share-option" id="share-whatsapp">
++          <div class="share-option-icon img-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/WhatsApp_icon.png" alt="WhatsApp"></div>
++          <span>WhatsApp</span>
++        </div>
++        <div class="share-option" id="share-email">
++          <div class="share-option-icon email-icon"><span class="material-symbols-outlined">mail</span></div>
++          <span>Email</span>
++        </div>
++        <div class="share-option" id="share-telegram">
++          <div class="share-option-icon img-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram"></div>
++          <span>Telegram</span>
++        </div>
++        <div class="share-option" id="share-twitter">
++          <div class="share-option-icon twitter-icon"><span>𝕏</span></div>
++          <span>X (Twitter)</span>
++        </div>
++      </div>
++    </div>
++  </div>
+   <!-- Debug Log Box -->
+   <div id="debug-log-box" class="debug-log-box hidden">
+     <div class="debug-log-header">
+@@ -430,20 +443,27 @@
+         </button>
+       </div>
+       <div class="modal-body plugins-body">
+-        <div class="plugin-cards-grid">
+-          <div class="plugin-card" id="card-spotify">
+-            <div class="card-icon spotify-icon">
+-              <span class="material-symbols-outlined">music_note</span>
+-            </div>
+-            <div class="card-info">
+-              <h4>Spotify</h4>
+-              <p>Search and play music while you write.</p>
+-            </div>
+-          </div>
+-          <!-- More plugins can be added here -->
++        <!-- Installed Plugin Cards -->
++        <div class="plugin-cards-grid" id="installed-plugin-cards">
++          <!-- Populated dynamically by plugin loader -->
+         </div>
+-      </div>
+ 
++        <!-- Empty State -->
++        <div id="plugins-empty-state" style="text-align:center; padding: 24px; color: var(--text-muted);">
++          <span class="material-symbols-outlined" style="font-size:48px; opacity:0.3;">extension_off</span>
++          <p style="margin-top:8px;">No plugins installed yet.</p>
++        </div>
++
++        <!-- Plugin Interaction Host (injected UI for modal-type plugins) -->
++        <div id="plugin-modal-host" style="margin-top: 16px;"></div>
++
++        <!-- Add Plugin Button -->
++        <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 16px;">
++          <button class="new-file-btn" id="btn-add-plugin" style="width:100%;">
++            <span class="material-symbols-outlined">add</span>
++            Add Plugin (.star file)
++          </button>
++        </div>
+       </div>
+     </div>
+   </div>
