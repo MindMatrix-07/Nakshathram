@@ -47,9 +47,19 @@ Not just Malayalam! Easily toggle between English and a wide array of other Indi
 ## 🚀 Getting Started
 
 ### Installation (Windows)
-1. Download the latest **`Nakshathram Setup 1.0.0.exe`** from the [Releases](https://github.com/MindMatrix-07/Nakshathram/releases) page.
-2. Run the installer and follow the on-screen instructions.
-3. Launch **Nakshathram** from your desktop or start menu.
+1. Download the latest **`Nakshathram Setup 1.0.1.exe`** from the [Releases](https://github.com/MindMatrix-07/Nakshathram/releases) page.
+2. Run the installer.
+3. **Note on Windows SmartScreen**: Since this app is not signed with a commercial certificate, you may see a "Windows protected your PC" warning. 
+   - Click **"More info"**.
+   - Click **"Run anyway"**.
+4. Follow the on-screen instructions to finish installation.
+
+---
+
+## 🛡️ Security & Privacy
+- **Unsigned App**: This app is currently unsigned. It is safe to use, but Windows will warn you because the developer identity hasn't been verified by a paid certificate authority yet.
+- **Local First**: Your files and notes never leave your computer. Transliteration happens locally or via encrypted API calls (for Varnam).
+- **Plugins**: Be careful when adding `.star` files from untrusted sources, as they can execute JavaScript in the app's context.
 
 ### Developer Setup
 If you want to run the code locally:

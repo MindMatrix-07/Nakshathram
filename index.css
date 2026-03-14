@@ -473,6 +473,29 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 
+.correct-trigger {
+  width: auto !important;
+  padding: 0 16px;
+  background: var(--accent-color) !important;
+  color: #000 !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 20px;
+  margin-right: 12px;
+  box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+.correct-trigger:hover {
+  background: #79b6ff !important;
+  box-shadow: 0 6px 16px rgba(88, 166, 255, 0.4);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 .tool-btn .material-symbols-outlined {
   font-size: 1.2rem;
 }
@@ -932,8 +955,9 @@ body {
 
 /* Correction Modal Specifics */
 .correction-modal {
-  max-width: 600px;
-  border: 1px solid var(--accent-color);
+  max-width: 720px;
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 .header-titles h3 {
@@ -980,9 +1004,9 @@ body {
   border-radius: 12px;
   border: 2px solid var(--border-color);
   overflow: hidden;
-  margin: 0 auto 24px auto;
+  margin: 0;
   touch-action: none;
-  max-width: 100%;
+  width: 100%;
   height: 300px; /* Fixed height for consistency */
 }
 
@@ -1076,7 +1100,7 @@ body {
   pointer-events: none;
 }
 
-.modal-content {
+.modal .modal-content {
   background: var(--editor-bg);
   border: 1px solid var(--border-color);
   border-radius: 20px;
@@ -1085,6 +1109,7 @@ body {
   max-width: 440px;
   box-shadow: 0 20px 50px rgba(0,0,0,0.5);
   animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-sizing: border-box;
 }
 
 @keyframes modalPop {
@@ -1129,7 +1154,7 @@ body {
   gap: 16px;
 }
 
-.modal-btn {
+.modal .modal-btn {
   padding: 12px 24px;
   border-radius: 10px;
   cursor: pointer;
@@ -1140,24 +1165,24 @@ body {
   font-family: inherit;
 }
 
-.modal-btn.primary {
+.modal .modal-btn.primary {
   background: var(--accent-color);
   color: white;
   box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
 }
 
-.modal-btn.primary:hover {
+.modal .modal-btn.primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(100, 108, 255, 0.4);
 }
 
-.modal-btn.secondary {
+.modal .modal-btn.secondary {
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
 }
 
-.modal-btn.secondary:hover {
+.modal .modal-btn.secondary:hover {
   background: var(--hover-bg);
   color: var(--text-primary);
 }
@@ -1165,25 +1190,23 @@ body {
 /* Correction Modal Redesign - Grid Edition */
 .correction-main-layout {
   display: grid;
-  grid-template-columns: auto 60px; /* Canvas + Vertical Control Column */
+  grid-template-columns: 1fr 48px; /* Canvas + Vertical Control Column */
   grid-template-areas: "canvas vertical";
-  gap: 20px;
-  align-items: center;
-  justify-content: center;
-  margin: 10px auto 20px auto;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 25px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  width: fit-content;
+  gap: 12px;
+  align-items: start;
+  margin: 0 0 20px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .canvas-area {
   grid-area: canvas;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  align-items: center;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent internals from pushing wider */
 }
 
 .vertical-control-column {
@@ -1192,15 +1215,18 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 400px; /* Match canvas height */
-  width: 60px;
+  height: 300px; /* Match canvas height exactly */
+  width: 48px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .ghost-slider-v {
   writing-mode: bt-lr; /* IE/Edge */
   appearance: slider-vertical;
   width: 12px;
-  height: 340px;
+  height: 220px;
   cursor: pointer;
 }
 
@@ -1210,6 +1236,7 @@ body {
   gap: 12px;
   padding: 0 5px;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .ghost-slider-h {
@@ -1238,6 +1265,49 @@ body {
 .ghost-slider-s {
   flex: 1;
   max-width: 200px;
+}
+
+.correction-results {
+  margin-top: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  width: 100%;
+}
+
+.correction-results.hidden {
+  display: none !important;
+}
+
+.results-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.results-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-pill {
+  background: var(--active-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.result-pill:hover, .result-pill.selected {
+  background: rgba(88, 166, 255, 0.1);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
 .icon-btn-small {

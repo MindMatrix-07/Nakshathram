@@ -56,7 +56,6 @@ const btnMore = document.getElementById('btn-more');
 const moreMenu = document.getElementById('more-menu');
 
 let selectedCorrections = []; // Array for multi-selection
-let lastCorrectionRange = null; // Store range for precise replacement
 
 // Ghost Character Customization State
 let ghostFontSize = 64;
@@ -1354,21 +1353,23 @@ function initCanvas() {
   const malayalamWord = lastTranslitData.malayalam || '';
   const charCount = malayalamWord.length;
   
-  // Calculate dynamic width: min 400, max 800, ~100px per char for better spacing
-  const dynamicWidth = Math.min(800, Math.max(400, charCount * 100));
-  
-  // Set container widths explicitly to avoid protrusion
+  // Rely on the responsive CSS grid layout for width instead of forcing fixed widths
   const container = drawingCanvas.parentElement; // .canvas-container
   const canvasArea = document.querySelector('.canvas-area');
   const horizontalRow = document.querySelector('.horizontal-control-row');
   
-  if (container) container.style.width = dynamicWidth + 'px';
-  if (canvasArea) canvasArea.style.width = dynamicWidth + 'px';
-  if (horizontalRow) horizontalRow.style.width = dynamicWidth + 'px';
+  // Clear any previously forced inline widths that break grid
+  if (container) container.style.width = '';
+  if (canvasArea) canvasArea.style.width = '';
+  if (horizontalRow) horizontalRow.style.width = '';
 
-  // Set internal resolution for the canvas
-  drawingCanvas.width = dynamicWidth;
-  drawingCanvas.height = 400; 
+  // Get the actual width and height rendered by the CSS model
+  const renderWidth = container ? container.offsetWidth : 500;
+  const renderHeight = container ? container.offsetHeight : 300;
+
+  // Set internal resolution for the canvas perfectly matching the CSS box
+  drawingCanvas.width = renderWidth;
+  drawingCanvas.height = renderHeight; 
   
   logToBox(`Canvas initialized: ${drawingCanvas.width}x${drawingCanvas.height}`);
   
@@ -1530,20 +1531,17 @@ if (btnClearCanvas) {
   btnClearCanvas.addEventListener('click', clearCanvas);
 }
 
-// Drawing Logic
+// Event listeners for drawing on the canvas
 drawingCanvas.addEventListener('mousedown', (e) => {
   drawing = true;
   const rect = drawingCanvas.getBoundingClientRect();
-  const scaleX = drawingCanvas.width / rect.width;
-  const scaleY = drawingCanvas.height / rect.height;
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
   
-  // No offset needed: clientX/Y centers on the hotspot (0, 20)
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
+  strokes.push([[x], [y], [Date.now()]]);
   
   ctx.beginPath();
   ctx.moveTo(x, y);
-  strokes.push([[x], [y], [Date.now()]]); 
 
   // Reset selection if user starts drawing again
   if (selectedCorrections.length > 0) {
@@ -1556,26 +1554,26 @@ drawingCanvas.addEventListener('mousedown', (e) => {
 drawingCanvas.addEventListener('mousemove', (e) => {
   if (!drawing) return;
   const rect = drawingCanvas.getBoundingClientRect();
-  const scaleX = drawingCanvas.width / rect.width;
-  const scaleY = drawingCanvas.height / rect.height;
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
   
-  // No offset needed
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
+  const currentStroke = strokes[strokes.length - 1];
+  currentStroke[0].push(x);
+  currentStroke[1].push(y);
+  currentStroke[2].push(Date.now());
   
   ctx.lineTo(x, y);
   ctx.stroke();
-  
-  if (!isEraser) {
-    const currentStroke = strokes[strokes.length - 1];
-    currentStroke[0].push(x);
-    currentStroke[1].push(y);
-    currentStroke[2].push(Date.now());
-  }
 });
 
-window.addEventListener('mouseup', () => {
+drawingCanvas.addEventListener('mouseup', () => {
   drawing = false;
+  ctx.closePath();
+});
+
+drawingCanvas.addEventListener('mouseleave', () => {
+  drawing = false;
+  ctx.closePath();
 });
 
 // Recognition API (using Google Web Handwriting API)
@@ -1656,7 +1654,7 @@ async function runCorrectionVerification() {
     correctionResults.classList.remove('hidden');
     candidates.forEach((word, index) => {
       const chip = document.createElement('div');
-      chip.className = 'result-chip';
+      chip.className = 'result-pill';
       chip.textContent = word;
       chip.addEventListener('click', () => {
         // Toggle selection
@@ -1691,7 +1689,7 @@ async function runCorrectionVerification() {
        correctionResults.classList.remove('hidden');
        translitCandidates.forEach(word => {
           const chip = document.createElement('div');
-          chip.className = 'result-chip';
+          chip.className = 'result-pill';
           chip.textContent = word;
           chip.addEventListener('click', () => {
              // Toggle selection
