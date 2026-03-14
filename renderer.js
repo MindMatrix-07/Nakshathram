@@ -1,6 +1,46 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const packageJson = require('./package.json');
+const {
+  STORAGE_KEYS,
+  DEFAULT_BACKEND_URL,
+  createDefaultProfile,
+  createDefaultPreferences,
+  createDefaultCloudConfig,
+  createEmptyLearningStore,
+  normalizeRomanInput,
+  createRomanSignature,
+  migrateLegacyAiMemory,
+  cloneStore,
+  recordSelection,
+  revertSelection,
+  deleteLearnedMapping,
+  buildLegacyMirror,
+  getLearningEntries,
+  getLearningSummary,
+  getLocalCandidates,
+  aggregateCloudRows,
+  mergeCandidateWords,
+  readStorage,
+  writeStorage,
+  readQueue,
+  writeQueue,
+  getCachedCloudRows,
+  setCachedCloudRows,
+  sanitizeBackendUrl,
+  sanitizeSupabaseUrl,
+  hasValidSupabaseConfig,
+  testSupabaseConnection,
+  syncProfile,
+  syncTypingEvents,
+  fetchCloudCandidates,
+  fetchRemoteProfile,
+  fetchUserTypingEvents,
+  buildStoreFromEvents,
+  hashPassword,
+  verifyPassword
+} = require('./api/typing-learning');
 const editor = document.getElementById('editor');
 const btnMl = document.getElementById('btn-ml');
 const btnEn = document.getElementById('btn-en');
@@ -109,6 +149,70 @@ const aiDashboardModal = document.getElementById('ai-dashboard-modal');
 const btnCloseAiModal = document.getElementById('btn-close-ai-modal');
 const btnClearAiMemory = document.getElementById('btn-clear-ai-memory');
 const aiWordTableBody = document.getElementById('ai-word-table-body');
+const btnSettings = document.getElementById('btn-settings');
+const settingsModal = document.getElementById('settings-modal');
+const btnCloseSettingsModal = document.getElementById('btn-close-settings-modal');
+const btnOpenSettingsFromAi = document.getElementById('btn-open-settings-from-ai');
+const btnSyncLearningNow = document.getElementById('btn-sync-learning-now');
+const aiDashboardStatus = document.getElementById('ai-dashboard-status');
+const dashboardSyncBadge = document.getElementById('dashboard-sync-badge');
+const dashboardSummaryCopy = document.getElementById('dashboard-summary-copy');
+const dashboardConsentText = document.getElementById('dashboard-consent-text');
+const dashboardActiveLanguage = document.getElementById('dashboard-active-language');
+const dashboardUserName = document.getElementById('dashboard-user-name');
+const dashboardUserId = document.getElementById('dashboard-user-id');
+const aiStatTotal = document.getElementById('ai-stat-total');
+const aiStatPatterns = document.getElementById('ai-stat-patterns');
+const aiStatWords = document.getElementById('ai-stat-words');
+const aiStatSync = document.getElementById('ai-stat-sync');
+const settingsUserName = document.getElementById('settings-user-name');
+const settingsUserId = document.getElementById('settings-user-id');
+const settingsConsentStatus = document.getElementById('settings-consent-status');
+const btnSaveProfile = document.getElementById('btn-save-profile');
+const btnCopyUserId = document.getElementById('btn-copy-user-id');
+const settingsLocalLearningToggle = document.getElementById('settings-local-learning-toggle');
+const settingsCloudSyncToggle = document.getElementById('settings-cloud-sync-toggle');
+const settingsAutoSyncToggle = document.getElementById('settings-auto-sync-toggle');
+const settingsPasswordEnabled = document.getElementById('settings-password-enabled');
+const settingsPassword = document.getElementById('settings-password');
+const settingsPasswordConfirm = document.getElementById('settings-password-confirm');
+const btnSavePassword = document.getElementById('btn-save-password');
+const btnSignOut = document.getElementById('btn-sign-out');
+const btnClearPassword = document.getElementById('btn-clear-password');
+const settingsBackendUrl = document.getElementById('settings-backend-url');
+const settingsSupabaseUrl = document.getElementById('settings-supabase-url');
+const settingsSupabaseKey = document.getElementById('settings-supabase-key');
+const btnTestSupabase = document.getElementById('btn-test-supabase');
+const btnSyncNow = document.getElementById('btn-sync-now');
+const supabaseConnectionBadge = document.getElementById('supabase-connection-badge');
+const settingsSyncStatus = document.getElementById('settings-sync-status');
+const settingsRestoreUserId = document.getElementById('settings-restore-user-id');
+const settingsRestorePassword = document.getElementById('settings-restore-password');
+const btnLinkExistingAccount = document.getElementById('btn-link-existing-account');
+const settingsRestoreStatus = document.getElementById('settings-restore-status');
+const authGatewayModal = document.getElementById('auth-gateway-modal');
+const authGatewayTitle = document.getElementById('auth-gateway-title');
+const authGatewayBadge = document.getElementById('auth-gateway-badge');
+const authGatewayCopy = document.getElementById('auth-gateway-copy');
+const authGatewayUserName = document.getElementById('auth-gateway-user-name');
+const authGatewayUserId = document.getElementById('auth-gateway-user-id');
+const authGatewayStatus = document.getElementById('auth-gateway-status');
+const authGatewayButtonText = document.getElementById('auth-gateway-button-text');
+const authGatewayIcon = document.getElementById('auth-gateway-icon');
+const btnAuthPrimary = document.getElementById('btn-auth-primary');
+const welcomeModal = document.getElementById('welcome-modal');
+const welcomeName = document.getElementById('welcome-name');
+const welcomeUserId = document.getElementById('welcome-user-id');
+const welcomePassword = document.getElementById('welcome-password');
+const welcomePasswordConfirm = document.getElementById('welcome-password-confirm');
+const welcomeConsent = document.getElementById('welcome-consent');
+const welcomeCloudOptIn = document.getElementById('welcome-cloud-opt-in');
+const welcomeStatus = document.getElementById('welcome-status');
+const btnCompleteOnboarding = document.getElementById('btn-complete-onboarding');
+const unlockModal = document.getElementById('unlock-modal');
+const unlockPassword = document.getElementById('unlock-password');
+const unlockStatus = document.getElementById('unlock-status');
+const btnUnlockApp = document.getElementById('btn-unlock-app');
 
 // Plugins Modal Elements
 const btnPluginsTarget = document.getElementById('btn-plugins');
@@ -144,7 +248,8 @@ let lastTranslitData = {
   candidates: [],
   selectionPath: null, // Used to re-select the word if needed
   justTransliterated: false, // Flag for AI unlearning
-  correctionRange: null // The exact text node range for correction replacement
+  correctionRange: null, // The exact text node range for correction replacement
+  learningEvent: null
 };
 
 // Custom words state - Refactored for language grouping
@@ -188,6 +293,68 @@ const googleInputToolInstallers = {
 };
 
 let googleInputCatalog = null;
+const DEVICE_ID_KEY = 'nakshathram_device_id_v1';
+const deviceId = localStorage.getItem(DEVICE_ID_KEY) || `device_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+localStorage.setItem(DEVICE_ID_KEY, deviceId);
+
+const legacyAiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
+let learningStore = readStorage(localStorage, STORAGE_KEYS.learningStore, null);
+if (!learningStore || !learningStore.version) {
+  const migratedStore = migrateLegacyAiMemory(legacyAiMemory);
+  learningStore = Object.keys(migratedStore.languages || {}).length > 0 ? migratedStore : createEmptyLearningStore();
+  writeStorage(localStorage, STORAGE_KEYS.learningStore, learningStore);
+}
+
+let syncQueue = readQueue(localStorage);
+let userProfile = readStorage(localStorage, STORAGE_KEYS.userProfile, null) || createDefaultProfile();
+let privacyPreferences = readStorage(localStorage, STORAGE_KEYS.preferences, null) || createDefaultPreferences();
+let cloudConfig = readStorage(localStorage, STORAGE_KEYS.cloudConfig, null) || createDefaultCloudConfig();
+let isSyncInProgress = false;
+let pendingCloudSyncTimer = null;
+let isAppUnlocked = false;
+let authGatewayMode = 'signin';
+
+function generateEightDigitUserId() {
+  return String(Math.floor(10000000 + Math.random() * 90000000));
+}
+
+if (!/^\d{8}$/.test(String(userProfile.userId || ''))) {
+  userProfile.userId = generateEightDigitUserId();
+}
+
+if (!cloudConfig.backendUrl) {
+  cloudConfig.backendUrl = DEFAULT_BACKEND_URL;
+}
+
+function saveUserProfile() {
+  writeStorage(localStorage, STORAGE_KEYS.userProfile, userProfile);
+}
+
+function savePrivacyPreferences() {
+  writeStorage(localStorage, STORAGE_KEYS.preferences, privacyPreferences);
+}
+
+function saveCloudConfig() {
+  writeStorage(localStorage, STORAGE_KEYS.cloudConfig, cloudConfig);
+}
+
+function syncLegacyLearningMirror() {
+  localStorage.setItem('manglish_ai_learning', JSON.stringify(buildLegacyMirror(learningStore)));
+}
+
+function saveLearningStore() {
+  writeStorage(localStorage, STORAGE_KEYS.learningStore, learningStore);
+  syncLegacyLearningMirror();
+}
+
+function saveSyncQueue() {
+  writeQueue(localStorage, syncQueue);
+}
+
+syncLegacyLearningMirror();
+saveUserProfile();
+savePrivacyPreferences();
+saveCloudConfig();
 
 // Toggle Languages
 btnMl.addEventListener('click', () => {
@@ -244,6 +411,7 @@ function selectLanguage(langCode, options = {}) {
 
   customWords = customWordsData[currentLang] || [];
   renderWordTable();
+  refreshLearningUI();
 
   isEnglishMode = false;
   localStorage.setItem('last_is_english_mode', false);
@@ -368,11 +536,428 @@ async function refreshGoogleInputCatalog() {
   renderOfflineTools();
 }
 
+function setStatusMessage(target, message, tone = 'default') {
+  if (!target) return;
+  target.textContent = message;
+
+  if (tone === 'error') {
+    target.style.color = '#ffb4b4';
+  } else if (tone === 'success') {
+    target.style.color = '#9fe3a8';
+  } else if (tone === 'accent') {
+    target.style.color = 'var(--accent-color)';
+  } else {
+    target.style.color = '';
+  }
+}
+
+function isLearningCollectionEnabled() {
+  return privacyPreferences.collectionConsent === true && privacyPreferences.localLearningEnabled === true;
+}
+
+function isCloudSyncEnabled() {
+  return isLearningCollectionEnabled() && privacyPreferences.cloudSyncEnabled === true;
+}
+
+function getCurrentLanguageName() {
+  return languages[currentLang] ? languages[currentLang].name : currentLang;
+}
+
+function updateConnectionBadge() {
+  if (!supabaseConnectionBadge) return;
+
+  if (!hasValidSupabaseConfig(cloudConfig)) {
+    supabaseConnectionBadge.textContent = 'NOT CONNECTED';
+    return;
+  }
+
+  if (cloudConfig.lastConnectionStatus === 'ok') {
+    supabaseConnectionBadge.textContent = 'DATABASE READY';
+    return;
+  }
+
+  if (cloudConfig.lastConnectionStatus === 'error') {
+    supabaseConnectionBadge.textContent = 'DATABASE ISSUE';
+    return;
+  }
+
+  supabaseConnectionBadge.textContent = 'MANAGED';
+}
+
+function updateDashboardSummary(statusMessage = null) {
+  const summary = getLearningSummary(learningStore, currentLang, syncQueue.length);
+
+  if (aiStatTotal) aiStatTotal.textContent = String(summary.totalSelections);
+  if (aiStatPatterns) aiStatPatterns.textContent = String(summary.uniquePatterns);
+  if (aiStatWords) aiStatWords.textContent = String(summary.uniqueWords);
+  if (aiStatSync) aiStatSync.textContent = String(summary.pendingSyncCount);
+  if (dashboardActiveLanguage) dashboardActiveLanguage.textContent = getCurrentLanguageName();
+  if (dashboardUserName) dashboardUserName.textContent = userProfile.displayName || 'Unnamed profile';
+  if (dashboardUserId) dashboardUserId.textContent = userProfile.userId;
+
+  if (dashboardSyncBadge) {
+    if (isCloudSyncEnabled() && hasValidSupabaseConfig(cloudConfig)) {
+      dashboardSyncBadge.textContent = syncQueue.length > 0 ? 'DATABASE PENDING' : 'DATABASE READY';
+    } else if (isLearningCollectionEnabled()) {
+      dashboardSyncBadge.textContent = 'LOCAL ONLY';
+    } else {
+      dashboardSyncBadge.textContent = 'SHARING OFF';
+    }
+  }
+
+  if (dashboardSummaryCopy) {
+    dashboardSummaryCopy.textContent = isCloudSyncEnabled()
+      ? 'Database-first lookup checks your learned language database first, then falls back to Google and Varnam when needed.'
+      : 'Local learning stays on this device. Database-backed defaults still help the core typing experience.';
+  }
+
+  if (dashboardConsentText) {
+    dashboardConsentText.textContent = isLearningCollectionEnabled()
+      ? 'You approved single-word typing data sharing during first launch, so new mappings can help the database-backed typing experience.'
+      : 'You declined first-launch sharing, so the app uses built-in providers and read-only database defaults without sending your new typing habits.';
+  }
+
+  if (statusMessage) {
+    setStatusMessage(aiDashboardStatus, statusMessage, 'accent');
+  } else if (aiDashboardStatus) {
+    const syncText = cloudConfig.lastSyncAt
+      ? `Last sync: ${new Date(cloudConfig.lastSyncAt).toLocaleString()}`
+      : 'No sync activity yet.';
+    setStatusMessage(aiDashboardStatus, syncText, cloudConfig.lastSyncError ? 'error' : 'default');
+  }
+}
+
+function renderAiWordTable() {
+  if (!aiWordTableBody) return;
+
+  const entries = getLearningEntries(learningStore, currentLang);
+  if (entries.length === 0) {
+    aiWordTableBody.innerHTML = `<tr><td colspan="4" class="empty-data">No learned data available for this language.</td></tr>`;
+    updateDashboardSummary();
+    return;
+  }
+
+  aiWordTableBody.innerHTML = '';
+  entries.forEach((entry) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${entry.pattern}</td>
+      <td>${entry.signature || '-'}</td>
+      <td>${entry.word}</td>
+      <td>${entry.frequency}</td>
+    `;
+    aiWordTableBody.appendChild(row);
+  });
+
+  updateDashboardSummary();
+}
+
+function updateSettingsUI(forceFields = false) {
+  const shouldRefreshFields = forceFields || !settingsModal || settingsModal.classList.contains('hidden');
+
+  if (shouldRefreshFields) {
+    if (settingsUserName) settingsUserName.value = userProfile.displayName || '';
+  }
+
+  if (settingsUserId) settingsUserId.textContent = userProfile.userId;
+  if (settingsConsentStatus) {
+    settingsConsentStatus.textContent = privacyPreferences.collectionConsent === null
+      ? 'Waiting for first-run choice'
+      : privacyPreferences.collectionConsent
+        ? 'Approved during first launch'
+        : 'Declined during first launch';
+  }
+
+  updateConnectionBadge();
+
+  if (settingsSyncStatus) {
+    const syncText = cloudConfig.lastSyncAt
+      ? `Last sync: ${new Date(cloudConfig.lastSyncAt).toLocaleString()}`
+      : 'Database access is managed internally by Nakshathram.';
+    setStatusMessage(settingsSyncStatus, cloudConfig.lastSyncError || syncText, cloudConfig.lastSyncError ? 'error' : 'default');
+  }
+}
+
+function refreshLearningUI(statusMessage = null) {
+  renderAiWordTable();
+  updateSettingsUI();
+  updateDashboardSummary(statusMessage);
+}
+
+function needsAccountSetup() {
+  return !userProfile.displayName || !userProfile.passwordHash || privacyPreferences.collectionConsent === null;
+}
+
+function showAuthGateway(message = null) {
+  if (!authGatewayModal) {
+    if (needsAccountSetup()) {
+      maybeShowOnboarding();
+    } else {
+      maybeShowUnlock(message || 'Password is required to continue.');
+    }
+    return;
+  }
+
+  authGatewayMode = needsAccountSetup() ? 'create' : 'signin';
+  isAppUnlocked = false;
+
+  if (welcomeModal) welcomeModal.classList.add('hidden');
+  if (unlockModal) unlockModal.classList.add('hidden');
+
+  if (authGatewayBadge) {
+    authGatewayBadge.textContent = authGatewayMode === 'create' ? 'CREATE ACCOUNT' : 'SIGN IN';
+  }
+
+  if (authGatewayTitle) {
+    authGatewayTitle.textContent = authGatewayMode === 'create'
+      ? 'Create your Nakshathram account'
+      : 'Sign in to Nakshathram';
+  }
+
+  if (authGatewayCopy) {
+    authGatewayCopy.textContent = authGatewayMode === 'create'
+      ? 'Start here first. Create your account with a password and one-time sharing agreement before entering the app.'
+      : 'Start here first. Sign in with your password to open Nakshathram and continue where you left off.';
+  }
+
+  if (authGatewayUserName) {
+    authGatewayUserName.textContent = authGatewayMode === 'create'
+      ? (userProfile.displayName || 'New local account')
+      : (userProfile.displayName || 'Saved local account');
+  }
+
+  if (authGatewayUserId) authGatewayUserId.textContent = userProfile.userId;
+  if (authGatewayButtonText) authGatewayButtonText.textContent = authGatewayMode === 'create' ? 'Create Account' : 'Sign In';
+  if (authGatewayIcon) authGatewayIcon.textContent = authGatewayMode === 'create' ? 'person_add' : 'lock_open';
+
+  const defaultMessage = authGatewayMode === 'create'
+    ? 'Create your account to enter the app.'
+    : 'Sign in to continue into the app.';
+  setStatusMessage(authGatewayStatus, message || defaultMessage, authGatewayMode === 'create' ? 'accent' : 'default');
+  authGatewayModal.classList.remove('hidden');
+}
+
+function maybeShowOnboarding() {
+  if (!welcomeModal) return;
+
+  const shouldShow = needsAccountSetup();
+  if (!shouldShow) return;
+
+  if (authGatewayModal) authGatewayModal.classList.add('hidden');
+  if (unlockModal) unlockModal.classList.add('hidden');
+  if (welcomeUserId) welcomeUserId.textContent = userProfile.userId;
+  if (welcomeName) welcomeName.value = userProfile.displayName || '';
+  if (welcomeConsent) welcomeConsent.checked = privacyPreferences.collectionConsent === true;
+  setStatusMessage(welcomeStatus, 'Accept the one-time sharing agreement to continue. This choice will be locked after you enter the app.');
+  welcomeModal.classList.remove('hidden');
+  isAppUnlocked = false;
+}
+
+function maybeShowUnlock(message = 'Password is required to continue.') {
+  if (!unlockModal) {
+    isAppUnlocked = true;
+    return;
+  }
+
+  if (userProfile.passwordHash) {
+    if (authGatewayModal) authGatewayModal.classList.add('hidden');
+    if (welcomeModal) welcomeModal.classList.add('hidden');
+    if (unlockPassword) unlockPassword.value = '';
+    setStatusMessage(unlockStatus, message);
+    unlockModal.classList.remove('hidden');
+    if (unlockPassword) unlockPassword.focus();
+    isAppUnlocked = false;
+    return;
+  }
+
+  isAppUnlocked = true;
+}
+
+function signOutCurrentSession() {
+  isAppUnlocked = false;
+  if (settingsModal) settingsModal.classList.add('hidden');
+  if (aiDashboardModal) aiDashboardModal.classList.add('hidden');
+  if (addWordModal) addWordModal.classList.add('hidden');
+  if (pluginsModal) pluginsModal.classList.add('hidden');
+  if (offlineToolsModal) offlineToolsModal.classList.add('hidden');
+  if (isCorrectModal) isCorrectModal.classList.add('hidden');
+  if (shareModal) shareModal.classList.add('hidden');
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
+  if (moreMenu) moreMenu.classList.add('hidden');
+  if (newFileMenu) newFileMenu.classList.add('hidden');
+  if (langMenu) langMenu.classList.add('hidden');
+  showAuthGateway('Signed out. Sign in to continue.');
+}
+
+async function recordTypingSelection(romanInput, nativeWord, source = 'transliteration_auto', weight = 1, lang = currentLang) {
+  if (!isLearningCollectionEnabled()) return null;
+
+  const result = recordSelection(learningStore, {
+    lang,
+    romanInput,
+    nativeWord,
+    source,
+    weight,
+    userId: userProfile.userId,
+    deviceId,
+    clientVersion: packageJson.version,
+    notePath: activeFilePath || ''
+  });
+
+  if (!result) return null;
+
+  syncQueue.push(result.event);
+  saveLearningStore();
+  saveSyncQueue();
+  refreshLearningUI();
+  schedulePendingCloudSync();
+  return result.event;
+}
+
+async function downloadCredentialsPdf(passwordValue) {
+  const result = await ipcRenderer.invoke('export-credentials-pdf', {
+    displayName: userProfile.displayName,
+    userId: userProfile.userId,
+    password: passwordValue
+  });
+
+  if (!result || !result.ok) {
+    return { ok: false, message: result && result.message ? result.message : 'Could not save credentials PDF.' };
+  }
+
+  return result;
+}
+
+function revertTypingSelection(eventMeta) {
+  if (!eventMeta || !eventMeta.romanInput || !eventMeta.nativeWord) return;
+
+  const reverted = revertSelection(learningStore, {
+    lang: eventMeta.lang || currentLang,
+    romanInput: eventMeta.romanInput,
+    nativeWord: eventMeta.nativeWord,
+    source: eventMeta.source || 'transliteration_auto',
+    weight: eventMeta.weight || 1
+  });
+
+  if (!reverted) return;
+
+  if (eventMeta.clientEventId) {
+    syncQueue = syncQueue.filter((entry) => entry.clientEventId !== eventMeta.clientEventId);
+  }
+
+  saveLearningStore();
+  saveSyncQueue();
+  refreshLearningUI('Last learned selection was removed.');
+}
+
+function schedulePendingCloudSync() {
+  if (!isCloudSyncEnabled() || !hasValidSupabaseConfig(cloudConfig)) {
+    return;
+  }
+
+  clearTimeout(pendingCloudSyncTimer);
+  pendingCloudSyncTimer = setTimeout(() => {
+    syncPendingCloudData(true);
+  }, 1800);
+}
+
+async function syncPendingCloudData(silent = false) {
+  if (isSyncInProgress) return { ok: false, message: 'Sync already in progress.' };
+  if (!isCloudSyncEnabled()) {
+    return { ok: false, message: 'Database sharing is disabled for this profile.' };
+  }
+  if (!hasValidSupabaseConfig(cloudConfig)) {
+    return { ok: false, message: 'Database connection is not available.' };
+  }
+
+  isSyncInProgress = true;
+  if (!silent) {
+    setStatusMessage(settingsSyncStatus, 'Syncing profile and typing data...', 'accent');
+    setStatusMessage(aiDashboardStatus, 'Syncing profile and typing data...', 'accent');
+  }
+
+  const profileResult = await syncProfile(cloudConfig, userProfile, privacyPreferences);
+  if (!profileResult.ok) {
+    isSyncInProgress = false;
+    cloudConfig.lastSyncError = profileResult.message;
+    cloudConfig.lastConnectionStatus = 'error';
+    saveCloudConfig();
+    refreshLearningUI(profileResult.message);
+    return profileResult;
+  }
+
+  const queueSnapshot = [...syncQueue];
+  const eventsResult = await syncTypingEvents(cloudConfig, queueSnapshot);
+  isSyncInProgress = false;
+
+  if (!eventsResult.ok) {
+    cloudConfig.lastSyncError = eventsResult.message;
+    cloudConfig.lastConnectionStatus = 'error';
+    saveCloudConfig();
+    refreshLearningUI(eventsResult.message);
+    return eventsResult;
+  }
+
+  syncQueue = syncQueue.filter((event) => !eventsResult.syncedIds.includes(event.clientEventId));
+  cloudConfig.lastSyncAt = new Date().toISOString();
+  cloudConfig.lastSyncError = '';
+  cloudConfig.lastConnectionStatus = 'ok';
+  cloudConfig.lastConnectionCheckAt = new Date().toISOString();
+  saveCloudConfig();
+  saveSyncQueue();
+  refreshLearningUI(`Synced ${eventsResult.syncedIds.length} typing records.`);
+  return { ok: true, message: `Synced ${eventsResult.syncedIds.length} typing records.` };
+}
+
+async function fetchRemoteRowsForWord(word, lang) {
+  if (!isCloudSyncEnabled() || !hasValidSupabaseConfig(cloudConfig)) return [];
+
+  const cachedRows = getCachedCloudRows(localStorage, lang, word);
+  if (cachedRows) return cachedRows;
+
+  const result = await fetchCloudCandidates(cloudConfig, lang, word);
+  if (!result.ok) {
+    cloudConfig.lastSyncError = result.message;
+    cloudConfig.lastConnectionStatus = 'error';
+    saveCloudConfig();
+    updateSettingsUI();
+    return [];
+  }
+
+  cloudConfig.lastConnectionStatus = 'ok';
+  cloudConfig.lastConnectionCheckAt = new Date().toISOString();
+  saveCloudConfig();
+  setCachedCloudRows(localStorage, lang, word, result.rows);
+  updateSettingsUI();
+  return result.rows;
+}
+
+async function getDatabaseFirstCandidates(word, lang, options = {}) {
+  const localCandidates = getLocalCandidates(learningStore, lang, word, options);
+  const remoteRows = await fetchRemoteRowsForWord(word, lang);
+  const remoteCandidates = aggregateCloudRows(remoteRows, word).map((entry) => ({
+    word: entry.word,
+    cloudCount: entry.cloudCount,
+    exactCount: entry.exactCount,
+    signatureCount: entry.signatureCount
+  }));
+
+  return mergeCandidateWords(localCandidates, remoteCandidates);
+}
+
 // Focus editor and sync UI on load
 window.addEventListener('DOMContentLoaded', () => {
   syncLanguageUI();
   refreshGoogleInputCatalog();
-  editor.focus();
+  updateSettingsUI(true);
+  refreshLearningUI();
+  showAuthGateway();
+
+  if (isAppUnlocked) {
+    editor.focus();
+  }
+
+  schedulePendingCloudSync();
 });
 
 // Secret Debug Toggle State
@@ -409,27 +994,12 @@ editor.addEventListener('keydown', (e) => {
 
   if (e.key === 'Backspace') {
     if (lastTranslitData && lastTranslitData.justTransliterated) {
-      // User erased immediately after transliteration! Unlearn from AI memory.
-      const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-      const learned = migrateAiMemory(aiMemory);
-      const pattern = lastTranslitData.english.toLowerCase();
-      const word = lastTranslitData.malayalam;
-      
-      if (learned[currentLang] && learned[currentLang][pattern] && learned[currentLang][pattern][word]) {
-        learned[currentLang][pattern][word] -= 1; // Decrement score
-        
-        if (learned[currentLang][pattern][word] <= 0) {
-          delete learned[currentLang][pattern][word];
-          if (Object.keys(learned[currentLang][pattern]).length === 0) {
-             delete learned[currentLang][pattern];
-          }
-        }
-        localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
-        console.log(`Unlearned: ${pattern} -> ${word}`);
-      }
-      
+      // User erased immediately after transliteration, so remove that fresh learning event.
+      revertTypingSelection(lastTranslitData.learningEvent);
+
       // Reset flag to prevent multiple decrements
       lastTranslitData.justTransliterated = false;
+      lastTranslitData.learningEvent = null;
     }
   } else if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta' && e.code !== 'Space' && e.code !== 'Enter') {
     // If they typed something else, they moved on
@@ -461,55 +1031,21 @@ editor.addEventListener('input', async () => {
   }
   
   const word = match[1];
-  
-  // Custom dict check
-  const customMatch = customWords.find(cw => cw.pattern.startsWith(word.toLowerCase()));
-  const customArr = customMatch ? [customMatch.word] : [];
+
+  const customArr = customWords
+    .filter((customWord) => customWord.pattern.startsWith(word.toLowerCase()))
+    .map((customWord) => customWord.word);
 
   try {
-    const langConfig = languages[currentLang];
-    // Fetch from both APIs simultaneously
-    const [varnamRes, googleRes] = await Promise.all([
-      fetch(`https://api.varnamproject.com/tl/${currentLang}/${word}`).catch(() => null),
-      fetch(`https://inputtools.google.com/request?text=${word}&itc=${langConfig.googleCode}&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=editor`).catch(() => null)
-    ]);
-
-    let varnamWords = [];
-    if (varnamRes && varnamRes.ok) {
-      const data = await varnamRes.json();
-      if (data.success && data.result) varnamWords = data.result;
-    }
-
-    let searchEngineWords = [];
-    if (googleRes && googleRes.ok) {
-      const gData = await googleRes.json();
-      if (gData[0] === 'SUCCESS' && gData[1] && gData[1][0] && gData[1][0][1]) {
-        searchEngineWords = gData[1][0][1];
-      }
-    }
-
-    // Combine them, giving priority to search engine (Google) results for accuracy
-    let combinedApiMatches = [...new Set([...searchEngineWords, ...varnamWords])];
-    
-    // Local AI Sorting Strategy
-    const learned = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-    const wordLearnings = learned[word.toLowerCase()];
-    if (wordLearnings) {
-      combinedApiMatches.sort((a, b) => {
-        const scoreA = wordLearnings[a] || 0;
-        const scoreB = wordLearnings[b] || 0;
-        return scoreB - scoreA; // descending
-      });
-    }
-
-    showSuggestionsForWord(word, customArr, combinedApiMatches);
-    
+    const candidates = await fetchCandidates(word, currentLang, { includePrefix: true });
+    const candidateWords = candidates.map((candidate) => typeof candidate === 'string' ? candidate : candidate.word);
+    showSuggestionsForWord(word, customArr, candidateWords);
   } catch (e) {
     console.error("Suggestion fetch error:", e);
   }
 });
 
-async function fetchCandidates(word, lang) {
+async function fetchProviderCandidates(word, lang) {
   const langConfig = languages[lang];
   if (!langConfig) return [];
   
@@ -538,6 +1074,25 @@ async function fetchCandidates(word, lang) {
     console.error("Fetch candidates error:", e);
     return [];
   }
+}
+
+async function fetchCandidates(word, lang, options = {}) {
+  const { includePrefix = false, limit = 8 } = options;
+  const databaseCandidates = await getDatabaseFirstCandidates(word, lang, {
+    includePrefix,
+    limit
+  });
+
+  const databaseWords = databaseCandidates.map((candidate) => candidate.word);
+  if (databaseWords.length >= limit && !includePrefix) {
+    return databaseWords.slice(0, limit);
+  }
+
+  const providerWords = await fetchProviderCandidates(word, lang);
+  return mergeCandidateWords(
+    databaseWords,
+    providerWords
+  ).slice(0, limit).map((candidate) => typeof candidate === 'string' ? candidate : candidate.word);
 }
 
 async function handleTransliteration(triggerChar, forcedReplacement = null) {
@@ -580,6 +1135,8 @@ async function handleTransliteration(triggerChar, forcedReplacement = null) {
   try {
     isTranslating = true;
     let malayalamWord = forcedReplacement;
+    let selectionSource = forcedReplacement ? 'suggestion_click' : 'provider_default';
+    let candidatesForWord = forcedReplacement ? [forcedReplacement] : [];
 
     if (!malayalamWord) {
       console.log(`Fetching transliteration for: ${wordToTranslate}`);
@@ -587,28 +1144,23 @@ async function handleTransliteration(triggerChar, forcedReplacement = null) {
       const customMatch = customWords.find(cw => cw.pattern === lowercaseWord);
       if (customMatch) {
         malayalamWord = customMatch.word;
+        selectionSource = 'custom_dictionary';
+        candidatesForWord = [customMatch.word];
       } else {
-        // Fetch from both APIs for the final space/enter replacement
-        const allCandidates = await fetchCandidates(wordToTranslate, currentLang);
+        const databaseCandidates = await getDatabaseFirstCandidates(wordToTranslate, currentLang, { includePrefix: false, limit: 8 });
+        const databaseWords = databaseCandidates.map((candidate) => candidate.word);
+        const providerWords = databaseWords.length > 0 ? await fetchProviderCandidates(wordToTranslate, currentLang) : await fetchProviderCandidates(wordToTranslate, currentLang);
+        const allCandidates = mergeCandidateWords(databaseWords, providerWords)
+          .slice(0, 8)
+          .map((candidate) => typeof candidate === 'string' ? candidate : candidate.word);
+
+        candidatesForWord = allCandidates;
         malayalamWord = allCandidates[0];
-        
-        // Store for correction modal
-        lastTranslitData.candidates = allCandidates;
+        selectionSource = databaseWords.length > 0 ? 'learned_database' : 'provider_default';
       }
     }
 
     if (malayalamWord) {
-      // Local AI Learning - Boost future suggestions
-      const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-      // Migration: check if old flat format
-      const learned = migrateAiMemory(aiMemory);
-      
-      if (!learned[currentLang]) learned[currentLang] = {};
-      if (!learned[currentLang][lowercaseWord]) learned[currentLang][lowercaseWord] = {};
-      
-      learned[currentLang][lowercaseWord][malayalamWord] = (learned[currentLang][lowercaseWord][malayalamWord] || 0) + 1;
-      localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
-
       // Create a range that selects exactly the typed English word
       const replaceRange = document.createRange();
       replaceRange.setStart(node, wordStartOffset);
@@ -635,13 +1187,16 @@ async function handleTransliteration(triggerChar, forcedReplacement = null) {
       const wordRange = document.createRange();
       wordRange.selectNodeContents(textNode);
 
+      const learningEvent = await recordTypingSelection(wordToTranslate, malayalamWord, selectionSource, 1, currentLang);
+
       // Store data for "Is it correct?" feature and unlearning
       lastTranslitData = {
         english: wordToTranslate,
         malayalam: malayalamWord,
-        candidates: lastTranslitData.candidates || [],
+        candidates: candidatesForWord,
         justTransliterated: true, // Flag for AI unlearning
-        correctionRange: wordRange
+        correctionRange: wordRange,
+        learningEvent
       };
       console.log(`Transliterated: ${wordToTranslate} -> ${malayalamWord}`);
       document.getElementById('btn-is-correct').classList.remove('hidden');
@@ -972,78 +1527,20 @@ if (btnClose) {
 }
 
 // -------- AI Dashboard Logic --------
-function migrateAiMemory(data) {
-  // If the data has keys that are not likely language codes (e.g. they are patterns), 
-  // it means it's the old format.
-  const langCodes = Object.keys(languages);
-  const firstKey = Object.keys(data)[0];
-  if (firstKey && !langCodes.includes(firstKey)) {
-    // Old format detected
-    const migrated = { 'ml': data };
-    localStorage.setItem('manglish_ai_learning', JSON.stringify(migrated));
-    return migrated;
-  }
-  return data;
-}
-
-function renderAiWordTable() {
-  const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-  const learned = migrateAiMemory(aiMemory)[currentLang] || {};
-  const entries = [];
-
-  for (const pattern in learned) {
-    for (const word in learned[pattern]) {
-      entries.push({
-        pattern,
-        word,
-        frequency: learned[pattern][word]
-      });
-    }
-  }
-
-  // Sort by frequency descending
-  entries.sort((a, b) => b.frequency - a.frequency);
-
-  if (entries.length === 0) {
-    aiWordTableBody.innerHTML = `<tr><td colspan="4" class="empty-data">No learned data available for this language.</td></tr>`;
-    return;
-  }
-
-  aiWordTableBody.innerHTML = '';
-  entries.forEach(entry => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${entry.pattern}</td>
-      <td>${entry.word}</td>
-      <td>${entry.frequency}</td>
-      <td style="text-align: center;">
-        <button class="delete-btn" onclick="deleteAiWord('${entry.pattern}', '${entry.word}')">
-          <span class="material-symbols-outlined" style="font-size: 1.2rem; color: #ff7b72;">delete</span>
-        </button>
-      </td>
-    `;
-    aiWordTableBody.appendChild(row);
-  });
-}
-
 window.deleteAiWord = (pattern, word) => {
   if (confirm(`Delete "${word}" from AI memory?`)) {
-    const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-    const learned = migrateAiMemory(aiMemory);
-    if (learned[currentLang] && learned[currentLang][pattern]) {
-      delete learned[currentLang][pattern][word];
-      if (Object.keys(learned[currentLang][pattern]).length === 0) {
-        delete learned[currentLang][pattern];
-      }
-      localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
-      renderAiWordTable();
+    if (deleteLearnedMapping(learningStore, currentLang, pattern, word)) {
+      syncQueue = syncQueue.filter((event) => !(event.language === currentLang && event.romanLower === pattern && event.nativeWord === word));
+      saveLearningStore();
+      saveSyncQueue();
+      refreshLearningUI(`Deleted ${word} from ${getCurrentLanguageName()} learning.`);
     }
   }
 };
 
 if (btnAiDashboard) {
   btnAiDashboard.addEventListener('click', () => {
-    renderAiWordTable();
+    refreshLearningUI();
     aiDashboardModal.classList.remove('hidden');
   });
 }
@@ -1065,10 +1562,318 @@ if (aiDashboardModal) {
 if (btnClearAiMemory) {
   btnClearAiMemory.addEventListener('click', () => {
     if (confirm('Are you sure you want to clear all learned AI memory? This cannot be undone.')) {
-      localStorage.removeItem('manglish_ai_learning');
-      renderAiWordTable();
-      alert('AI Memory cleared successfully.');
+      learningStore = createEmptyLearningStore();
+      syncQueue = [];
+      saveLearningStore();
+      saveSyncQueue();
+      refreshLearningUI('Local learning memory cleared.');
     }
+  });
+}
+
+if (btnOpenSettingsFromAi) {
+  btnOpenSettingsFromAi.addEventListener('click', () => {
+    updateSettingsUI(true);
+    settingsModal.classList.remove('hidden');
+  });
+}
+
+if (btnSyncLearningNow) {
+  btnSyncLearningNow.addEventListener('click', async () => {
+    const result = await syncPendingCloudData();
+    if (!result.ok) {
+      setStatusMessage(aiDashboardStatus, result.message, 'error');
+    }
+  });
+}
+
+if (btnSettings && settingsModal) {
+  btnSettings.addEventListener('click', () => {
+    updateSettingsUI(true);
+    settingsModal.classList.remove('hidden');
+  });
+}
+
+if (btnCloseSettingsModal) {
+  btnCloseSettingsModal.addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+  });
+}
+
+if (settingsModal) {
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.classList.add('hidden');
+    }
+  });
+}
+
+if (btnAuthPrimary) {
+  btnAuthPrimary.addEventListener('click', () => {
+    if (authGatewayMode === 'create') {
+      maybeShowOnboarding();
+      if (welcomeName) welcomeName.focus();
+      return;
+    }
+
+    maybeShowUnlock('Password is required to continue.');
+  });
+}
+
+if (btnSaveProfile) {
+  btnSaveProfile.addEventListener('click', async () => {
+    const displayName = settingsUserName.value.trim();
+    if (!displayName) {
+      setStatusMessage(settingsSyncStatus, 'Please enter a display name before saving.', 'error');
+      return;
+    }
+
+    userProfile.displayName = displayName;
+    saveUserProfile();
+    updateSettingsUI();
+    refreshLearningUI('Profile saved.');
+
+    if (isCloudSyncEnabled() && hasValidSupabaseConfig(cloudConfig)) {
+      await syncProfile(cloudConfig, userProfile, privacyPreferences);
+    }
+  });
+}
+
+if (btnCopyUserId) {
+  btnCopyUserId.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(userProfile.userId);
+    setStatusMessage(settingsSyncStatus, 'User ID copied to clipboard.', 'success');
+  });
+}
+
+if (settingsLocalLearningToggle) {
+  settingsLocalLearningToggle.addEventListener('change', () => {
+    privacyPreferences.localLearningEnabled = settingsLocalLearningToggle.checked;
+    if (settingsLocalLearningToggle.checked) {
+      privacyPreferences.collectionConsent = true;
+    }
+    if (!settingsLocalLearningToggle.checked) {
+      privacyPreferences.cloudSyncEnabled = false;
+      if (settingsCloudSyncToggle) settingsCloudSyncToggle.checked = false;
+    }
+    savePrivacyPreferences();
+    refreshLearningUI('Learning preference updated.');
+  });
+}
+
+if (settingsCloudSyncToggle) {
+  settingsCloudSyncToggle.addEventListener('change', () => {
+    privacyPreferences.cloudSyncEnabled = settingsCloudSyncToggle.checked;
+    if (privacyPreferences.cloudSyncEnabled) {
+      privacyPreferences.collectionConsent = true;
+      privacyPreferences.localLearningEnabled = true;
+      if (settingsLocalLearningToggle) settingsLocalLearningToggle.checked = true;
+    }
+    savePrivacyPreferences();
+    refreshLearningUI('Cloud sync preference updated.');
+    schedulePendingCloudSync();
+  });
+}
+
+if (settingsAutoSyncToggle) {
+  settingsAutoSyncToggle.addEventListener('change', () => {
+    privacyPreferences.autoSyncEnabled = settingsAutoSyncToggle.checked;
+    savePrivacyPreferences();
+    refreshLearningUI('Auto sync preference updated.');
+    if (privacyPreferences.autoSyncEnabled) {
+      schedulePendingCloudSync();
+    }
+  });
+}
+
+if (btnSavePassword) {
+  btnSavePassword.addEventListener('click', async () => {
+    const password = settingsPassword.value;
+    const confirmPassword = settingsPasswordConfirm.value;
+    if (password.length < 4) {
+      setStatusMessage(settingsSyncStatus, 'Use at least 4 characters for the password.', 'error');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setStatusMessage(settingsSyncStatus, 'Password and confirmation do not match.', 'error');
+      return;
+    }
+
+    if (password) {
+      userProfile.passwordHash = await hashPassword(password);
+      userProfile.passwordEnabled = true;
+      saveUserProfile();
+      settingsPassword.value = '';
+      settingsPasswordConfirm.value = '';
+      updateSettingsUI(true);
+      const pdfResult = await downloadCredentialsPdf(password);
+      setStatusMessage(
+        settingsSyncStatus,
+        pdfResult.ok ? 'Password updated and credentials PDF saved.' : pdfResult.message,
+        pdfResult.ok ? 'success' : 'error'
+      );
+    } else {
+      setStatusMessage(settingsSyncStatus, 'Enter a password before saving.', 'error');
+    }
+  });
+}
+
+if (btnSignOut) {
+  btnSignOut.addEventListener('click', () => {
+    signOutCurrentSession();
+  });
+}
+
+if (btnTestSupabase) {
+  btnTestSupabase.addEventListener('click', async () => {
+    cloudConfig.backendUrl = sanitizeBackendUrl(settingsBackendUrl ? settingsBackendUrl.value : cloudConfig.backendUrl);
+    cloudConfig.supabaseUrl = sanitizeSupabaseUrl(settingsSupabaseUrl.value);
+    cloudConfig.supabaseAnonKey = settingsSupabaseKey.value.trim();
+    saveCloudConfig();
+    updateConnectionBadge();
+
+    const result = await testSupabaseConnection(cloudConfig);
+    cloudConfig.lastConnectionStatus = result.ok ? 'ok' : 'error';
+    cloudConfig.lastConnectionCheckAt = new Date().toISOString();
+    cloudConfig.lastSyncError = result.ok ? '' : result.message;
+    saveCloudConfig();
+    updateSettingsUI();
+    setStatusMessage(settingsSyncStatus, result.message, result.ok ? 'success' : 'error');
+  });
+}
+
+if (btnSyncNow) {
+  btnSyncNow.addEventListener('click', async () => {
+    cloudConfig.backendUrl = sanitizeBackendUrl(settingsBackendUrl ? settingsBackendUrl.value : cloudConfig.backendUrl);
+    cloudConfig.supabaseUrl = sanitizeSupabaseUrl(settingsSupabaseUrl.value);
+    cloudConfig.supabaseAnonKey = settingsSupabaseKey.value.trim();
+    saveCloudConfig();
+    updateConnectionBadge();
+    await syncPendingCloudData();
+  });
+}
+
+if (btnLinkExistingAccount) {
+  btnLinkExistingAccount.addEventListener('click', async () => {
+    const restoreUserId = settingsRestoreUserId.value.trim();
+    const restorePassword = settingsRestorePassword.value;
+
+    if (!restoreUserId || !restorePassword) {
+      setStatusMessage(settingsRestoreStatus, 'Enter both the existing user ID and password.', 'error');
+      return;
+    }
+
+    cloudConfig.backendUrl = sanitizeBackendUrl(settingsBackendUrl ? settingsBackendUrl.value : cloudConfig.backendUrl);
+    cloudConfig.supabaseUrl = sanitizeSupabaseUrl(settingsSupabaseUrl.value);
+    cloudConfig.supabaseAnonKey = settingsSupabaseKey.value.trim();
+    saveCloudConfig();
+
+    const profileResult = await fetchRemoteProfile(cloudConfig, restoreUserId);
+    if (!profileResult.ok || !profileResult.profile) {
+      setStatusMessage(settingsRestoreStatus, profileResult.message || 'Could not find that cloud profile.', 'error');
+      return;
+    }
+
+    const passwordMatches = await verifyPassword(restorePassword, profileResult.profile.password_hash || '');
+    if (!passwordMatches) {
+      setStatusMessage(settingsRestoreStatus, 'Password did not match that stored profile.', 'error');
+      return;
+    }
+
+    const eventsResult = await fetchUserTypingEvents(cloudConfig, restoreUserId);
+    if (!eventsResult.ok) {
+      setStatusMessage(settingsRestoreStatus, eventsResult.message, 'error');
+      return;
+    }
+
+    userProfile.userId = profileResult.profile.user_id;
+    userProfile.displayName = profileResult.profile.display_name || userProfile.displayName;
+    userProfile.passwordHash = profileResult.profile.password_hash || '';
+    userProfile.passwordEnabled = Boolean(profileResult.profile.password_enabled);
+    privacyPreferences.collectionConsent = profileResult.profile.collection_consent !== false;
+    privacyPreferences.localLearningEnabled = profileResult.profile.local_learning_enabled !== false;
+    privacyPreferences.cloudSyncEnabled = profileResult.profile.cloud_sync_enabled === true;
+    learningStore = buildStoreFromEvents(eventsResult.rows);
+    saveUserProfile();
+    savePrivacyPreferences();
+    saveLearningStore();
+    refreshLearningUI('Existing cloud account linked to this device.');
+    setStatusMessage(settingsRestoreStatus, `Linked ${eventsResult.rows.length} cloud typing records.`, 'success');
+  });
+}
+
+if (btnCompleteOnboarding) {
+  btnCompleteOnboarding.addEventListener('click', async () => {
+    const displayName = welcomeName.value.trim();
+    const password = welcomePassword ? welcomePassword.value : '';
+    const confirmPassword = welcomePasswordConfirm ? welcomePasswordConfirm.value : '';
+
+    if (!displayName) {
+      setStatusMessage(welcomeStatus, 'Please enter your name to continue.', 'error');
+      return;
+    }
+
+    if (password.length < 4) {
+      setStatusMessage(welcomeStatus, 'Create a password with at least 4 characters.', 'error');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setStatusMessage(welcomeStatus, 'Password and confirmation do not match.', 'error');
+      return;
+    }
+
+    if (!(welcomeConsent && welcomeConsent.checked)) {
+      setStatusMessage(welcomeStatus, 'Accept the one-time sharing agreement before continuing.', 'error');
+      return;
+    }
+
+    userProfile.displayName = displayName;
+    userProfile.passwordHash = await hashPassword(password);
+    userProfile.passwordEnabled = true;
+    privacyPreferences.collectionConsent = true;
+    privacyPreferences.localLearningEnabled = true;
+    privacyPreferences.cloudSyncEnabled = true;
+    privacyPreferences.autoSyncEnabled = true;
+    saveUserProfile();
+    savePrivacyPreferences();
+    updateSettingsUI(true);
+    refreshLearningUI('Welcome profile saved.');
+    welcomeModal.classList.add('hidden');
+    schedulePendingCloudSync();
+
+    const pdfResult = await downloadCredentialsPdf(password);
+    if (!pdfResult.ok) {
+      alert(`Account created, but the credentials PDF could not be saved: ${pdfResult.message}`);
+    }
+
+    isAppUnlocked = true;
+    editor.focus();
+  });
+}
+
+if (btnUnlockApp) {
+  btnUnlockApp.addEventListener('click', async () => {
+    const enteredPassword = unlockPassword.value;
+    const passwordMatches = await verifyPassword(enteredPassword, userProfile.passwordHash);
+    if (!passwordMatches) {
+      setStatusMessage(unlockStatus, 'Password mismatch. Try again.', 'error');
+      return;
+    }
+
+    unlockModal.classList.add('hidden');
+    unlockPassword.value = '';
+    userProfile.lastUnlockedAt = new Date().toISOString();
+    saveUserProfile();
+    isAppUnlocked = true;
+
+    const pdfResult = await downloadCredentialsPdf(enteredPassword);
+    if (!pdfResult.ok) {
+      alert(`Signed in, but the credentials PDF could not be saved: ${pdfResult.message}`);
+    }
+
+    editor.focus();
   });
 }
 
@@ -1894,14 +2699,7 @@ function updateWithCorrection(newWord) {
   customWords = customWordsData[currentLang];
   renderWordTable();
 
-  // Update AI Learning
-  const aiMemory = JSON.parse(localStorage.getItem('manglish_ai_learning') || '{}');
-  const learned = migrateAiMemory(aiMemory);
-  
-  if (!learned[currentLang]) learned[currentLang] = {};
-  if (!learned[currentLang][pattern]) learned[currentLang][pattern] = {};
-  learned[currentLang][pattern][newWord] = (learned[currentLang][pattern][newWord] || 0) + 10; 
-  localStorage.setItem('manglish_ai_learning', JSON.stringify(learned));
+  recordTypingSelection(lastTranslitData.english, newWord, 'correction_update', 3, currentLang);
 
   btnIsCorrect.classList.add('hidden');
 }

@@ -8,7 +8,7 @@
   <!-- Google Fonts & Material Symbols for modern UI -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
@@ -18,7 +18,9 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo">
-          <span class="logo-text">Nakshathram</span>
+          <span class="logo-text">
+            <span class="logo-text-base">Naksha</span><span class="logo-text-accent">thram</span>
+          </span>
         </div>
         <div class="made-using">
           <span class="made-using-text">made using</span>
@@ -41,6 +43,11 @@
       <button class="new-file-btn" id="btn-ai-dashboard">
         <span class="material-symbols-outlined">psychology</span>
         AI Dashboard
+      </button>
+
+      <button class="new-file-btn" id="btn-settings">
+        <span class="material-symbols-outlined">settings</span>
+        Settings
       </button>
 
       <button class="new-file-btn" id="btn-offline-tools">
@@ -254,35 +261,97 @@
 
   <!-- AI Dashboard Modal -->
   <div id="ai-dashboard-modal" class="modal-overlay hidden">
-    <div class="modal-content">
+    <div class="modal-content ai-dashboard-content">
       <div class="modal-header">
         <h3>AI LEARNING DASHBOARD</h3>
         <button class="close-modal" id="btn-close-ai-modal">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="ai-stats-summary">
-          <p>This dashboard shows the words the Local AI has learned from your typing habits. These words are prioritized in future suggestions.</p>
-          <button class="btn-primary" id="btn-clear-ai-memory" style="background-color: #d73a49; margin-top: 10px;">
-            <span class="material-symbols-outlined">delete_sweep</span>
-            Clear All AI Memory
-          </button>
+      <div class="modal-body ai-dashboard-body">
+        <div class="dashboard-stats-grid">
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Selections Learned</span>
+            <strong id="ai-stat-total">0</strong>
+            <p>Single-word decisions saved for the active language.</p>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Roman Variants</span>
+            <strong id="ai-stat-patterns">0</strong>
+            <p>Spellings like <code>thilakkam</code> and <code>thilakam</code>.</p>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Target Words</span>
+            <strong id="ai-stat-words">0</strong>
+            <p>Native words the app can prioritize instantly.</p>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Pending Sync</span>
+            <strong id="ai-stat-sync">0</strong>
+            <p>Queued entries waiting to reach your database.</p>
+          </div>
         </div>
-        <div class="word-table-wrapper" style="margin-top: 20px;">
-          <table class="word-table">
-            <thead>
-              <tr>
-                <th>Pattern</th>
-                <th>Learned Word</th>
-                <th>Freq</th>
-                <th style="width: 50px; text-align: center;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="ai-word-table-body">
-              <tr><td colspan="3" class="empty-data">No data available</td></tr>
-            </tbody>
-          </table>
+
+        <div class="dashboard-panel-grid">
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Learning Summary</h4>
+              <span class="plugin-badge" id="dashboard-sync-badge">LOCAL ONLY</span>
+            </div>
+            <p class="plugin-desc" id="dashboard-summary-copy">
+              Database-first lookup checks your learned single-word mappings before falling back to Google and Varnam.
+            </p>
+            <div class="dashboard-meta-list">
+              <div class="dashboard-meta-item">
+                <span>Active language</span>
+                <strong id="dashboard-active-language">Malayalam</strong>
+              </div>
+              <div class="dashboard-meta-item">
+                <span>Profile</span>
+                <strong id="dashboard-user-name">Not set</strong>
+              </div>
+              <div class="dashboard-meta-item">
+                <span>User ID</span>
+                <strong id="dashboard-user-id">Pending</strong>
+              </div>
+            </div>
+            <p class="helper-text" id="dashboard-consent-text">
+              We collect your single word typing data to enhance the typing experience when you allow local learning.
+            </p>
+            <div class="offline-tool-actions">
+              <button class="btn-secondary" id="btn-open-settings-from-ai">
+                <span class="material-symbols-outlined">settings</span>
+                Open Settings
+              </button>
+            </div>
+            <p class="helper-text" id="ai-dashboard-status">No sync activity yet.</p>
+          </div>
+
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Collected Mappings</h4>
+              <span class="plugin-badge">LANGUAGE SPLIT</span>
+            </div>
+            <p class="plugin-desc">
+              Exact roman matches are checked first. Signature matches collapse repeated letters so variants like
+              <code>thilakkam</code>, <code>thilakam</code>, and <code>thillakkam</code> can all guide the same native word.
+            </p>
+            <div class="word-table-wrapper dashboard-word-table">
+              <table class="word-table">
+                <thead>
+                  <tr>
+                    <th>Roman</th>
+                    <th>Signature</th>
+                    <th>Learned Word</th>
+                    <th>Local Freq</th>
+                  </tr>
+                </thead>
+                <tbody id="ai-word-table-body">
+                  <tr><td colspan="4" class="empty-data">No data available</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -515,6 +584,196 @@
             Checking which bundled offline installers are available for the languages in this app.
           </p>
           <div class="plugin-cards-grid" id="offline-tools-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content settings-modal-content">
+      <div class="modal-header">
+        <h3>SETTINGS</h3>
+        <button class="close-modal" id="btn-close-settings-modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body settings-body">
+        <div class="settings-grid">
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Profile</h4>
+              <span class="plugin-badge">LOCAL ACCOUNT</span>
+            </div>
+            <label class="settings-label" for="settings-user-name">Display name</label>
+            <input type="text" id="settings-user-name" class="modal-input" placeholder="Your name">
+            <div class="settings-id-card">
+              <span class="settings-label">User ID</span>
+              <strong id="settings-user-id">Pending</strong>
+            </div>
+            <p class="helper-text">
+              Keep this 8-digit user ID with your password. A credentials PDF will be saved to your Downloads folder after sign in.
+            </p>
+            <div class="offline-tool-actions">
+              <button class="btn-primary" id="btn-save-profile">
+                <span class="material-symbols-outlined">save</span>
+                Save Profile
+              </button>
+              <button class="btn-secondary" id="btn-copy-user-id">
+                <span class="material-symbols-outlined">content_copy</span>
+                Copy User ID
+              </button>
+            </div>
+          </div>
+
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Database Sharing</h4>
+              <span class="plugin-badge">LOCKED</span>
+            </div>
+            <div class="settings-id-card">
+              <span class="settings-label">Sharing consent</span>
+              <strong id="settings-consent-status">Pending first-run choice</strong>
+            </div>
+            <p class="helper-text" id="settings-learning-note">
+              The database sharing choice is collected only once during first launch and cannot be changed later in the app.
+            </p>
+          </div>
+
+          <div class="plugin-section">
+            <div class="plugin-header">
+              <h4>Password</h4>
+              <span class="plugin-badge">REQUIRED</span>
+            </div>
+            <label class="settings-label" for="settings-password">Change password</label>
+            <input type="password" id="settings-password" class="modal-input" placeholder="Enter a new password">
+            <label class="settings-label" for="settings-password-confirm">Confirm password</label>
+            <input type="password" id="settings-password-confirm" class="modal-input" placeholder="Confirm password">
+            <div class="offline-tool-actions">
+              <button class="btn-primary" id="btn-save-password">
+                <span class="material-symbols-outlined">lock</span>
+                Save Password
+              </button>
+              <button class="btn-secondary danger-btn" id="btn-sign-out">
+                <span class="material-symbols-outlined">logout</span>
+                Sign Out
+              </button>
+            </div>
+            <p class="helper-text">
+              Password is mandatory. After each successful sign in, Nakshathram saves a credentials PDF to your Downloads folder.
+            </p>
+          </div>
+        </div>
+        <p class="helper-text settings-status-message" id="settings-sync-status">
+          Profile and password updates will appear here.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="auth-gateway-modal" class="modal-overlay hidden">
+    <div class="modal-content auth-gateway-content">
+      <div class="modal-body auth-gateway-body">
+        <div class="auth-gateway-brand">
+          <span class="made-using-text">Account Access</span>
+          <div class="logo auth-gateway-logo">
+            <span class="logo-text">
+              <span class="logo-text-base">Naksha</span><span class="logo-text-accent">thram</span>
+            </span>
+          </div>
+          <p class="plugin-desc" id="auth-gateway-copy">
+            Sign in or create your account to continue into the app.
+          </p>
+        </div>
+
+        <div class="plugin-section auth-gateway-panel">
+          <div class="plugin-header">
+            <h4 id="auth-gateway-title">Sign in to continue</h4>
+            <span class="plugin-badge" id="auth-gateway-badge">SIGN IN</span>
+          </div>
+
+          <div class="dashboard-meta-list auth-gateway-meta">
+            <div class="settings-id-card">
+              <span class="settings-label" id="auth-gateway-name-label">Account</span>
+              <strong id="auth-gateway-user-name">Local account</strong>
+            </div>
+            <div class="settings-id-card">
+              <span class="settings-label">User ID</span>
+              <strong id="auth-gateway-user-id">Pending</strong>
+            </div>
+          </div>
+
+          <p class="helper-text" id="auth-gateway-status">
+            Use the button below to continue.
+          </p>
+
+          <div class="offline-tool-actions">
+            <button class="modal-btn primary" id="btn-auth-primary">
+              <span class="material-symbols-outlined" id="auth-gateway-icon">lock_open</span>
+              <span id="auth-gateway-button-text">Sign In</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="welcome-modal" class="modal-overlay hidden">
+    <div class="modal-content onboarding-modal-content">
+      <div class="modal-header">
+        <h3>WELCOME TO NAKSHATHRAM</h3>
+      </div>
+      <div class="modal-body onboarding-body">
+        <div class="onboarding-hero">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          <div>
+            <h4>Make typing smarter from day one</h4>
+            <p>Create your account with a mandatory password. To enter the app, accept the one-time agreement for sharing single-word typing choices that improve the typing experience.</p>
+          </div>
+        </div>
+        <label class="settings-label" for="welcome-name">Your name</label>
+        <input type="text" id="welcome-name" class="modal-input" placeholder="Enter your name">
+        <div class="settings-id-card">
+          <span class="settings-label">Generated user ID</span>
+          <strong id="welcome-user-id">Pending</strong>
+        </div>
+        <label class="settings-label" for="welcome-password">Create password</label>
+        <input type="password" id="welcome-password" class="modal-input" placeholder="Create your password">
+        <label class="settings-label" for="welcome-password-confirm">Confirm password</label>
+        <input type="password" id="welcome-password-confirm" class="modal-input" placeholder="Confirm your password">
+        <label class="settings-switch strong" for="welcome-consent">
+          <input type="checkbox" id="welcome-consent">
+          <span>I agree to let Nakshathram share my single-word typing choices to improve the database-backed typing experience.</span>
+        </label>
+        <p class="helper-text" id="welcome-status">
+          You must accept this one-time agreement to continue. It cannot be edited later. After you continue, a credentials PDF will be saved automatically to Downloads.
+        </p>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="btn-complete-onboarding">
+            <span class="material-symbols-outlined">arrow_forward</span>
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="unlock-modal" class="modal-overlay hidden">
+    <div class="modal-content auth-modal-content">
+      <div class="modal-header">
+        <h3>UNLOCK APP</h3>
+      </div>
+      <div class="modal-body onboarding-body">
+        <p class="plugin-desc">
+          Enter your password to open Nakshathram. A fresh credentials PDF will be saved automatically after successful sign in.
+        </p>
+        <label class="settings-label" for="unlock-password">Password</label>
+        <input type="password" id="unlock-password" class="modal-input" placeholder="Enter password">
+        <p class="helper-text" id="unlock-status">Password is required to continue.</p>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="btn-unlock-app">
+            <span class="material-symbols-outlined">lock_open</span>
+            Unlock
+          </button>
         </div>
       </div>
     </div>
