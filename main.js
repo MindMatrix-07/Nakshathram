@@ -1,7 +1,83 @@
-const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell } = require('electron');
+const fs = require('fs');
 const path = require('path');
 
 let mainWindow;
+
+const GOOGLE_INPUT_TOOL_INSTALLERS = {
+  as: null,
+  bn: null,
+  gu: 'GoogleInputGujarati.exe',
+  hi: 'GoogleInputHindi.exe',
+  kn: 'GoogleInputKannada.exe',
+  ml: 'GoogleInputMalayalam.exe',
+  mr: 'GoogleInputMarathi.exe',
+  ne: 'GoogleInputNepali.exe',
+  or: 'GoogleInputOriya.exe',
+  pa: 'GoogleInputPunjabi.exe',
+  sa: 'GoogleInputSanskrit.exe',
+  ta: 'GoogleInputTamil.exe',
+  te: 'GoogleInputTelugu.exe'
+};
+
+const GOOGLE_INPUT_GENERIC_INSTALLER = 'GoogleInputTools.exe';
+
+function getGoogleInputToolsDirectory() {
+  const candidateDirs = [
+    path.join(__dirname, 'resources', 'google-input-tools'),
+    path.join(process.resourcesPath || '', 'app', 'resources', 'google-input-tools'),
+    path.join(process.resourcesPath || '', 'resources', 'google-input-tools'),
+    path.join(process.resourcesPath || '', 'google-input-tools')
+  ].filter(Boolean);
+
+  return candidateDirs.find((dir) => fs.existsSync(dir)) || candidateDirs[0];
+}
+
+function getGoogleInputToolsCatalog() {
+  const baseDir = getGoogleInputToolsDirectory();
+  const installers = {};
+
+  for (const [lang, installerName] of Object.entries(GOOGLE_INPUT_TOOL_INSTALLERS)) {
+    const installerPath = installerName ? path.join(baseDir, installerName) : null;
+    installers[lang] = {
+      fileName: installerName,
+      exists: Boolean(installerPath && fs.existsSync(installerPath))
+    };
+  }
+
+  const genericInstallerPath = path.join(baseDir, GOOGLE_INPUT_GENERIC_INSTALLER);
+
+  return {
+    baseDir,
+    exists: fs.existsSync(baseDir),
+    installers,
+    genericInstaller: {
+      fileName: GOOGLE_INPUT_GENERIC_INSTALLER,
+      exists: fs.existsSync(genericInstallerPath)
+    }
+  };
+}
+
+function resolveGoogleInputInstaller(installerName) {
+  const catalog = getGoogleInputToolsCatalog();
+  const allowedNames = new Set(
+    [
+      GOOGLE_INPUT_GENERIC_INSTALLER,
+      ...Object.values(GOOGLE_INPUT_TOOL_INSTALLERS).filter(Boolean)
+    ].map((name) => name.toLowerCase())
+  );
+
+  if (!installerName || !allowedNames.has(installerName.toLowerCase())) {
+    return null;
+  }
+
+  const installerPath = path.join(catalog.baseDir, installerName);
+  if (!fs.existsSync(installerPath)) {
+    return null;
+  }
+
+  return installerPath;
+}
 
 function createWindow () {
   mainWindow = new BrowserWindow({
@@ -28,6 +104,58 @@ function createWindow () {
     mainWindow = null;
   });
 }
+
+ipcMain.handle('list-google-input-tools', async () => {
+  return getGoogleInputToolsCatalog();
+});
+
+ipcMain.handle('install-google-input-tool', async (event, installerName) => {
+  try {
+    const installerPath = resolveGoogleInputInstaller(installerName);
+    if (!installerPath) {
+      return { ok: false, message: 'Installer file was not found in this build.' };
+    }
+
+    const errorMessage = await shell.openPath(installerPath);
+    if (errorMessage) {
+      return { ok: false, message: errorMessage };
+    }
+
+    return { ok: true, message: `Opened ${path.basename(installerPath)}` };
+  } catch (error) {
+    console.error('Failed to open Google Input Tools installer:', error);
+    return { ok: false, message: error.message };
+  }
+});
+
+ipcMain.handle('open-google-input-tools-folder', async () => {
+  try {
+    const catalog = getGoogleInputToolsCatalog();
+    if (!catalog.exists) {
+      return { ok: false, message: 'Google Input Tools folder is not bundled.' };
+    }
+
+    const errorMessage = await shell.openPath(catalog.baseDir);
+    if (errorMessage) {
+      return { ok: false, message: errorMessage };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error('Failed to open Google Input Tools folder:', error);
+    return { ok: false, message: error.message };
+  }
+});
+
+ipcMain.handle('open-input-settings', async () => {
+  try {
+    await shell.openExternal('ms-settings:regionlanguage');
+    return { ok: true };
+  } catch (error) {
+    console.error('Failed to open Windows language settings:', error);
+    return { ok: false, message: error.message };
+  }
+});
 
 app.whenReady().then(() => {
   createWindow();
@@ -73,7 +201,6 @@ app.whenReady().then(() => {
   });
 
   // Handle Reading a Plugin File
-  const fs = require('fs');
   ipcMain.handle('read-plugin-file', async (event, filePath) => {
     try {
       const content = fs.readFileSync(filePath, 'utf-8');

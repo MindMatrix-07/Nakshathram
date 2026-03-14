@@ -43,6 +43,11 @@
         AI Dashboard
       </button>
 
+      <button class="new-file-btn" id="btn-offline-tools">
+        <span class="material-symbols-outlined">keyboard</span>
+        Offline Input Tools
+      </button>
+
       <button class="new-file-btn" id="btn-plugins">
         <span class="material-symbols-outlined">extension</span>
         Plugins
@@ -463,6 +468,53 @@
             <span class="material-symbols-outlined">add</span>
             Add Plugin (.star file)
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="offline-tools-modal" class="modal-overlay hidden">
+    <div class="modal-content plugins-modal-content offline-tools-modal-content">
+      <div class="modal-header">
+        <h3>OFFLINE INPUT TOOLS</h3>
+        <button class="close-modal" id="btn-close-offline-tools-modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body plugins-body">
+        <div class="plugin-section">
+          <div class="plugin-header">
+            <h4>Google Input Tools for Windows</h4>
+            <span class="plugin-badge">SYSTEM IME</span>
+          </div>
+          <p class="plugin-desc">
+            Nakshathram can launch the bundled offline Google Input Tools installers from inside the app.
+            After installation, switch the active Windows keyboard with Win + Space and type directly in the editor.
+          </p>
+          <div class="offline-tools-actions">
+            <button class="new-file-btn" id="btn-open-input-settings">
+              <span class="material-symbols-outlined">language</span>
+              Open Windows Keyboard Settings
+            </button>
+            <button class="new-file-btn" id="btn-open-offline-tools-folder">
+              <span class="material-symbols-outlined">folder_open</span>
+              Open Installer Folder
+            </button>
+          </div>
+          <p class="offline-tools-note">
+            Your existing live transliteration stays available. The Windows IME and Nakshathram's built-in suggestions can be used side by side.
+          </p>
+        </div>
+
+        <div class="plugin-section">
+          <div class="plugin-header">
+            <h4>Languages Available in Nakshathram</h4>
+            <span class="plugin-badge" id="offline-tools-summary">CHECKING</span>
+          </div>
+          <p class="plugin-desc" id="offline-tools-summary-text">
+            Checking which bundled offline installers are available for the languages in this app.
+          </p>
+          <div class="plugin-cards-grid" id="offline-tools-grid"></div>
         </div>
       </div>
     </div>

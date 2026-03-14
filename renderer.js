@@ -114,6 +114,14 @@ const aiWordTableBody = document.getElementById('ai-word-table-body');
 const btnPluginsTarget = document.getElementById('btn-plugins');
 const pluginsModal = document.getElementById('plugins-modal');
 const btnClosePluginsModal = document.getElementById('btn-close-plugins-modal');
+const btnOfflineToolsTarget = document.getElementById('btn-offline-tools');
+const offlineToolsModal = document.getElementById('offline-tools-modal');
+const btnCloseOfflineToolsModal = document.getElementById('btn-close-offline-tools-modal');
+const btnOpenInputSettings = document.getElementById('btn-open-input-settings');
+const btnOpenOfflineToolsFolder = document.getElementById('btn-open-offline-tools-folder');
+const offlineToolsGrid = document.getElementById('offline-tools-grid');
+const offlineToolsSummary = document.getElementById('offline-tools-summary');
+const offlineToolsSummaryText = document.getElementById('offline-tools-summary-text');
 
 // Plugin Host Elements
 const pluginSidebarHost = document.getElementById('plugin-sidebar-host');
@@ -165,6 +173,22 @@ const languages = {
   'te': { name: 'తెలుగు', googleCode: 'te-t-i0-und' }
 };
 
+const googleInputToolInstallers = {
+  gu: 'GoogleInputGujarati.exe',
+  hi: 'GoogleInputHindi.exe',
+  kn: 'GoogleInputKannada.exe',
+  ml: 'GoogleInputMalayalam.exe',
+  mr: 'GoogleInputMarathi.exe',
+  ne: 'GoogleInputNepali.exe',
+  or: 'GoogleInputOriya.exe',
+  pa: 'GoogleInputPunjabi.exe',
+  sa: 'GoogleInputSanskrit.exe',
+  ta: 'GoogleInputTamil.exe',
+  te: 'GoogleInputTelugu.exe'
+};
+
+let googleInputCatalog = null;
+
 // Toggle Languages
 btnMl.addEventListener('click', () => {
   setEnglishMode(false);
@@ -211,9 +235,143 @@ function syncLanguageUI() {
   }
 }
 
+function selectLanguage(langCode, options = {}) {
+  const { closeMenus = true, focusEditor = true } = options;
+  if (!languages[langCode]) return;
+
+  currentLang = langCode;
+  localStorage.setItem('last_selected_lang', langCode);
+
+  customWords = customWordsData[currentLang] || [];
+  renderWordTable();
+
+  isEnglishMode = false;
+  localStorage.setItem('last_is_english_mode', false);
+
+  syncLanguageUI();
+
+  if (closeMenus && langMenu) {
+    langMenu.classList.add('hidden');
+  }
+
+  if (focusEditor) {
+    editor.focus();
+  }
+
+  if (lastTranslitData.english) {
+    fetchCandidates(lastTranslitData.english, currentLang).then(cands => {
+      lastTranslitData.candidates = cands;
+      if (!isCorrectModal.classList.contains('hidden') && !correctionResults.classList.contains('hidden')) {
+        runCorrectionVerification();
+      }
+    });
+  }
+}
+
+function getOfflineToolCards() {
+  const installerState = googleInputCatalog ? googleInputCatalog.installers || {} : {};
+  const genericInstaller = googleInputCatalog ? googleInputCatalog.genericInstaller : null;
+
+  return Object.entries(languages).map(([code, config]) => {
+    const dedicatedInstaller = googleInputToolInstallers[code];
+    const dedicatedState = dedicatedInstaller ? installerState[code] : null;
+    const genericAvailable = Boolean(genericInstaller && genericInstaller.exists);
+
+    let statusClass = 'online';
+    let statusLabel = 'ONLINE ONLY';
+    let installLabel = '';
+    let installTarget = '';
+    let description = 'Use Nakshathram built-in transliteration for this language.';
+
+    if (dedicatedInstaller && dedicatedState && dedicatedState.exists) {
+      statusClass = 'ready';
+      statusLabel = 'OFFLINE READY';
+      installLabel = 'Install Offline Tool';
+      installTarget = dedicatedInstaller;
+      description = `${dedicatedInstaller} is bundled with this build for Windows desktop IME input.`;
+    } else if (!dedicatedInstaller && genericAvailable) {
+      statusClass = 'online';
+      statusLabel = 'TRY FULL PACKAGE';
+      installLabel = 'Try Full Package';
+      installTarget = genericInstaller.fileName;
+      description = 'No dedicated installer was bundled for this language. You can still try the generic Google Input Tools package.';
+    } else if (dedicatedInstaller) {
+      statusClass = 'missing';
+      statusLabel = 'INSTALLER MISSING';
+      description = `${dedicatedInstaller} is not bundled in this build, so this language stays on the online path for now.`;
+    } else {
+      statusClass = 'online';
+      statusLabel = 'ONLINE ONLY';
+      description = 'Nakshathram supports this language, but no dedicated offline Google installer was provided.';
+    }
+
+    return {
+      code,
+      displayName: config.name,
+      statusClass,
+      statusLabel,
+      installLabel,
+      installTarget,
+      description
+    };
+  });
+}
+
+function renderOfflineTools() {
+  if (!offlineToolsGrid || !offlineToolsSummary || !offlineToolsSummaryText) return;
+
+  const cards = getOfflineToolCards();
+  const readyCount = cards.filter(card => card.statusClass === 'ready').length;
+  const totalCount = cards.length;
+  const genericAvailable = Boolean(googleInputCatalog && googleInputCatalog.genericInstaller && googleInputCatalog.genericInstaller.exists);
+
+  offlineToolsSummary.textContent = `${readyCount}/${totalCount} READY`;
+  offlineToolsSummaryText.textContent = genericAvailable
+    ? `${readyCount} app languages have bundled dedicated offline installers. Assamese and Bengali can keep using the current online transliteration or try the full GoogleInputTools package.`
+    : `${readyCount} app languages have bundled dedicated offline installers. Languages without a bundled installer stay on the current online transliteration path.`;
+
+  offlineToolsGrid.innerHTML = cards.map(card => `
+    <div class="offline-tool-card">
+      <div class="offline-tool-top">
+        <div class="offline-tool-meta">
+          <h4>${card.displayName}</h4>
+          <p>${card.code.toUpperCase()}</p>
+        </div>
+        <span class="offline-tool-chip ${card.statusClass}">${card.statusLabel}</span>
+      </div>
+      <p class="offline-tool-desc">${card.description}</p>
+      <div class="offline-tool-actions">
+        <button
+          class="btn-primary"
+          data-action="install-input-tool"
+          data-installer="${card.installTarget}"
+          ${card.installTarget ? '' : 'disabled'}
+        >
+          ${card.installLabel || 'Installer Not Available'}
+        </button>
+        <button class="btn-secondary" data-action="apply-language" data-lang="${card.code}">
+          Use in App
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function refreshGoogleInputCatalog() {
+  try {
+    googleInputCatalog = await ipcRenderer.invoke('list-google-input-tools');
+  } catch (error) {
+    console.error('Could not read bundled Google Input Tools catalog:', error);
+    googleInputCatalog = null;
+  }
+
+  renderOfflineTools();
+}
+
 // Focus editor and sync UI on load
 window.addEventListener('DOMContentLoaded', () => {
   syncLanguageUI();
+  refreshGoogleInputCatalog();
   editor.focus();
 });
 
@@ -793,32 +951,7 @@ if (btnLangSelector && langMenu) {
 langItems.forEach(item => {
   item.addEventListener('click', () => {
     const langCode = item.getAttribute('data-lang');
-    
-    currentLang = langCode;
-    localStorage.setItem('last_selected_lang', langCode);
-    
-    // Refresh tables for the new language
-    customWords = customWordsData[currentLang] || [];
-    renderWordTable();
-    
-    // Switch to Indian language mode automatically
-    isEnglishMode = false;
-    localStorage.setItem('last_is_english_mode', false);
-    
-    syncLanguageUI();
-    langMenu.classList.add('hidden');
-    editor.focus();
-
-    // If correction modal is open or a word was just typed, refresh candidates
-    if (lastTranslitData.english) {
-      fetchCandidates(lastTranslitData.english, currentLang).then(cands => {
-        lastTranslitData.candidates = cands;
-        // If results are currently showing in modal, refresh them automatically
-        if (!isCorrectModal.classList.contains('hidden') && !correctionResults.classList.contains('hidden')) {
-          runCorrectionVerification();
-        }
-      });
-    }
+    selectLanguage(langCode);
   });
 });
 
@@ -1935,6 +2068,84 @@ async function reloadInstalledPlugins() {
   }
 }
 
+// -------- Offline Google Input Tools Wiring --------
+
+if (btnOfflineToolsTarget && offlineToolsModal) {
+  btnOfflineToolsTarget.addEventListener('click', async () => {
+    await refreshGoogleInputCatalog();
+    offlineToolsModal.classList.remove('hidden');
+  });
+}
+
+if (btnCloseOfflineToolsModal) {
+  btnCloseOfflineToolsModal.addEventListener('click', () => {
+    offlineToolsModal.classList.add('hidden');
+  });
+}
+
+if (offlineToolsModal) {
+  offlineToolsModal.addEventListener('click', (e) => {
+    if (e.target === offlineToolsModal) {
+      offlineToolsModal.classList.add('hidden');
+    }
+  });
+}
+
+if (btnOpenInputSettings) {
+  btnOpenInputSettings.addEventListener('click', async () => {
+    const result = await ipcRenderer.invoke('open-input-settings');
+    if (!result || !result.ok) {
+      alert(result && result.message ? result.message : 'Could not open Windows keyboard settings.');
+    }
+  });
+}
+
+if (btnOpenOfflineToolsFolder) {
+  btnOpenOfflineToolsFolder.addEventListener('click', async () => {
+    const result = await ipcRenderer.invoke('open-google-input-tools-folder');
+    if (!result || !result.ok) {
+      alert(result && result.message ? result.message : 'Could not open the bundled installer folder.');
+    }
+  });
+}
+
+if (offlineToolsGrid) {
+  offlineToolsGrid.addEventListener('click', async (event) => {
+    const actionButton = event.target.closest('button[data-action]');
+    if (!actionButton) return;
+
+    const action = actionButton.getAttribute('data-action');
+
+    if (action === 'apply-language') {
+      const langCode = actionButton.getAttribute('data-lang');
+      selectLanguage(langCode, { closeMenus: true, focusEditor: true });
+      offlineToolsModal.classList.add('hidden');
+      return;
+    }
+
+    if (action === 'install-input-tool') {
+      const installerName = actionButton.getAttribute('data-installer');
+      if (!installerName) return;
+
+      const originalText = actionButton.textContent;
+      actionButton.disabled = true;
+      actionButton.textContent = 'Opening...';
+
+      try {
+        const result = await ipcRenderer.invoke('install-google-input-tool', installerName);
+        if (!result || !result.ok) {
+          alert(result && result.message ? result.message : 'Could not launch the installer.');
+        } else {
+          alert(`${installerName} opened. Finish the Windows installer, then switch keyboards with Win + Space inside Nakshathram.`);
+        }
+      } finally {
+        actionButton.disabled = false;
+        actionButton.textContent = originalText;
+      }
+    }
+  });
+}
+
 // -------- Plugins Modal Wiring --------
 
 if (btnPluginsTarget && pluginsModal) {
@@ -1975,4 +2186,4 @@ if (activeFilePath && fs.existsSync(activeFilePath)) {
   renderFileList();
 }
 
-
+
